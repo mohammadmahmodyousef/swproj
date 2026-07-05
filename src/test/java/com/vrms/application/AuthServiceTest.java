@@ -36,69 +36,68 @@ class AuthServiceTest {
 	}
 
 
-    @Test
+	@Test
     void usernameExistsShouldReturnTrueWhenUsernameExists() {
-        ManagerRepository repository =
-                new InMemoryManagerRepository();
-
-        repository.save(new Manager("admin", "1234"));
-
-        AuthService authService =
-                new AuthService(repository);
-
         assertTrue(authService.usernameExists("admin"));
     }
 
     @Test
     void usernameExistsShouldReturnFalseWhenUsernameDoesNotExist() {
-        ManagerRepository repository =
-                new InMemoryManagerRepository();
-
-        repository.save(new Manager("admin", "1234"));
-
-        AuthService authService =
-                new AuthService(repository);
-
         assertFalse(authService.usernameExists("ali"));
     }
 
     @Test
-    void loginShouldReturnTrueForCorrectPassword() {
-        ManagerRepository repository =
-                new InMemoryManagerRepository();
-
-        repository.save(new Manager("admin", "1234"));
-
-        AuthService authService =
-                new AuthService(repository);
-
+    void loginShouldReturnTrueForValidCredentials() {
         assertTrue(authService.login("admin", "1234"));
     }
 
     @Test
     void loginShouldReturnFalseForIncorrectPassword() {
-        ManagerRepository repository =
-                new InMemoryManagerRepository();
-
-        repository.save(new Manager("admin", "1234"));
-
-        AuthService authService =
-                new AuthService(repository);
-
         assertFalse(authService.login("admin", "5555"));
     }
 
     @Test
     void loginShouldReturnFalseForUnknownUsername() {
-        ManagerRepository repository =
-                new InMemoryManagerRepository();
-
-        repository.save(new Manager("admin", "1234"));
-
-        AuthService authService =
-                new AuthService(repository);
-
         assertFalse(authService.login("ali", "1234"));
     }
 
+    @Test
+    void isLoggedInShouldReturnTrueAfterSuccessfulLogin() {
+        authService.login("admin", "1234");
+
+        assertTrue(authService.isLoggedIn());
+    }
+
+    @Test
+    void isLoggedInShouldReturnFalseBeforeLogin() {
+        assertFalse(authService.isLoggedIn());
+    }
+
+    @Test
+    void logoutShouldRemoveLoggedInManager() {
+        authService.login("admin", "1234");
+
+        authService.logout();
+
+        assertFalse(authService.isLoggedIn());
+    }
+
+    @Test
+    void failedLoginShouldNotCreateLoginSession() {
+        authService.login("admin", "5555");
+
+        assertFalse(authService.isLoggedIn());
+    }
+
+    @Test
+    void protectedActionsShouldRequireLoginAgainAfterLogout() {
+        authService.login("admin", "1234");
+        authService.logout();
+
+        assertFalse(authService.isLoggedIn());
+
+        authService.login("admin", "1234");
+
+        assertTrue(authService.isLoggedIn());
+    }
 }
