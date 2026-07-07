@@ -3,25 +3,41 @@ package com.vrms;
 import java.util.Scanner;
 
 import com.vrms.application.AuthService;
+import com.vrms.application.VehicleService;
 import com.vrms.domain.Manager;
+import com.vrms.domain.Vehicle;
+import com.vrms.domain.VehicleStatus;
 import com.vrms.persistence.InMemoryManagerRepository;
+import com.vrms.persistence.InMemoryVehicleRepository;
 import com.vrms.persistence.ManagerRepository;
+import com.vrms.persistence.VehicleRepository;
 import com.vrms.presentation.ManagerLoginController;
 import com.vrms.presentation.ManagerLogoutController;
+import com.vrms.presentation.VehicleCatalogController;
 
 public class Main {
 
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
 
-        ManagerRepository repository = new InMemoryManagerRepository();
-        repository.save(new Manager("admin", "1234"));
+        ManagerRepository managerRepository = new InMemoryManagerRepository();
+        managerRepository.save(new Manager("admin", "1234"));
 
-        AuthService authService = new AuthService(repository);
+        VehicleRepository vehicleRepository = new InMemoryVehicleRepository();
+        vehicleRepository.save(new Vehicle("V001", "Toyota Corolla", "Car", VehicleStatus.AVAILABLE));
+        vehicleRepository.save(new Vehicle("V002", "BMW X5", "Car", VehicleStatus.RENTED));
+        vehicleRepository.save(new Vehicle("V003", "Ford Transit", "Van", VehicleStatus.AVAILABLE));
+
+        AuthService authService = new AuthService(managerRepository);
+        VehicleService vehicleService = new VehicleService(vehicleRepository);
+
         ManagerLoginController loginController = new ManagerLoginController(authService);
         ManagerLogoutController logoutController = new ManagerLogoutController(authService);
+        VehicleCatalogController catalogController = new VehicleCatalogController(vehicleService, authService);
 
-        while (true) {
+        boolean running = true;
+
+        while (running) {
             while (!authService.isLoggedIn()) {
                 System.out.print("Enter username: ");
                 String username = input.nextLine();
@@ -35,7 +51,6 @@ public class Main {
 
                 System.out.print("Enter password: ");
                 String password = input.nextLine();
-
                 String result = loginController.login(username, password);
                 System.out.println(result);
 
@@ -46,19 +61,26 @@ public class Main {
             }
 
             System.out.println("Welcome to Vehicle Rental Management System");
-            System.out.print("Enter logout to logout or exit to close: ");
-            String choice = input.nextLine();
 
-            if (choice.equalsIgnoreCase("logout")) {
-                System.out.println(logoutController.logout());
+            while (authService.isLoggedIn() && running) {
                 System.out.println();
-            } else if (choice.equalsIgnoreCase("exit")) {
-                break;
-            } else {
-                System.out.println("Invalid choice");
+                System.out.println("1. View available vehicles");
+                System.out.println("2. Logout");
+                System.out.println("3. Exit");
+                System.out.print("Enter choice: ");
+                String choice = input.nextLine();
+
+                if (choice.equals("1")) {
+                    System.out.println(catalogController.viewAvailableVehicles());
+                } else if (choice.equals("2")) {
+                    System.out.println(logoutController.logout());
+                } else if (choice.equals("3")) {
+                    running = false;
+                } else {
+                    System.out.println("Invalid choice");
+                }
             }
         }
 
-        
     }
 }
