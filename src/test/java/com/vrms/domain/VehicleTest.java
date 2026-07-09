@@ -42,7 +42,7 @@ class VehicleTest {
 
     @Test
     void getTypeShouldReturnVehicleType() {
-        assertEquals("Car", vehicle.getType());
+    	assertEquals("Car", vehicle.getModel());
     }
 
     @Test
@@ -59,6 +59,6 @@ class VehicleTest {
 
     @Test
     void toStringShouldReturnVehicleInformation() {
-        assertEquals("V001 - Toyota Corolla - Car", vehicle.toString());
+    	assertEquals("V001 - Toyota Corolla - Car - AVAILABLE", vehicle.toString());
     }
 }

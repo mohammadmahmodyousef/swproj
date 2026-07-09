@@ -1,15 +1,21 @@
 package com.vrms.persistence;
 
 import static org.junit.jupiter.api.Assertions.*;
-
+import java.nio.file.Path;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.vrms.domain.Manager;
-class InMemoryManagerRepositoryTest {
-	private InMemoryManagerRepository repository;
+class FileManagerRepositoryTest {
+	@TempDir
+    Path tempDir;
+
+    private ManagerRepository repository;
+
+    
 	@BeforeAll
 	static void setUpBeforeClass() throws Exception {
 	}
@@ -20,7 +26,7 @@ class InMemoryManagerRepositoryTest {
 
 	@BeforeEach
     void setUp() {
-        repository = new InMemoryManagerRepository();
+        repository = new FileManagerRepository(tempDir.resolve("managers.txt"));
     }
 
 	@AfterEach
@@ -28,16 +34,16 @@ class InMemoryManagerRepositoryTest {
 	}
 
 	@Test
-	void test() {
-		fail("Not yet implemented");
-	}
-	@Test
     void saveAndFindByUsernameShouldReturnSavedManager() {
         Manager manager = new Manager("admin", "1234");
 
         repository.save(manager);
 
-        assertSame(manager, repository.findByUsername("admin"));
+        Manager savedManager = repository.findByUsername("admin");
+
+        assertNotNull(savedManager);
+        assertEquals("admin", savedManager.getUsername());
+        assertTrue(savedManager.hasPassword("1234"));
     }
 
     @Test
@@ -46,14 +52,12 @@ class InMemoryManagerRepositoryTest {
     }
 
     @Test
-    void saveShouldReplaceManagerWithSameUsername() {
-        Manager oldManager = new Manager("admin", "oldPassword");
-        Manager newManager = new Manager("admin", "newPassword");
+    void saveShouldRejectDuplicateUsername() {
+        repository.save(new Manager("admin", "1234"));
 
-        repository.save(oldManager);
-        repository.save(newManager);
-
-        assertSame(newManager, repository.findByUsername("admin"));
+        assertThrows(IllegalArgumentException.class, () -> {
+            repository.save(new Manager("admin", "5678"));
+        });
     }
 
 }

@@ -2,23 +2,28 @@ package com.vrms.presentation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.vrms.application.AuthService;
 import com.vrms.application.VehicleService;
 import com.vrms.domain.Manager;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
-import com.vrms.persistence.InMemoryManagerRepository;
-import com.vrms.persistence.InMemoryVehicleRepository;
+import com.vrms.persistence.FileManagerRepository;
+import com.vrms.persistence.FileVehicleRepository;
 import com.vrms.persistence.ManagerRepository;
 import com.vrms.persistence.VehicleRepository;
-
+import java.nio.file.Path;
 class VehicleCatalogControllerTest {
+
+    @TempDir
+    Path tempDir;
 
     private AuthService authService;
     private VehicleCatalogController controller;
@@ -33,11 +38,11 @@ class VehicleCatalogControllerTest {
 
     @BeforeEach
     void setUp() {
-        ManagerRepository managerRepository = new InMemoryManagerRepository();
+        ManagerRepository managerRepository = new FileManagerRepository(tempDir.resolve("managers.txt"));
         managerRepository.save(new Manager("admin", "1234"));
         authService = new AuthService(managerRepository);
 
-        VehicleRepository vehicleRepository = new InMemoryVehicleRepository();
+        VehicleRepository vehicleRepository = new FileVehicleRepository(tempDir.resolve("vehicles.txt"));
         vehicleRepository.save(new Vehicle("V001", "Toyota Corolla", "Car", VehicleStatus.AVAILABLE));
         vehicleRepository.save(new Vehicle("V002", "BMW X5", "Car", VehicleStatus.RENTED));
         vehicleRepository.save(new Vehicle("V003", "Ford Transit", "Van", VehicleStatus.AVAILABLE));
@@ -51,7 +56,6 @@ class VehicleCatalogControllerTest {
         authService = null;
         controller = null;
     }
-
     @Test
     void viewAvailableVehiclesShouldRequireManagerLogin() {
         String result = controller.viewAvailableVehicles();
