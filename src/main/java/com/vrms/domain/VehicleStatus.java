@@ -1,6 +1,7 @@
 package com.vrms.domain;
 
 public enum VehicleStatus {
-	  AVAILABLE,
-	    RENTED
+    AVAILABLE,
+    RENTED,
+    MAINTENANCE
 }

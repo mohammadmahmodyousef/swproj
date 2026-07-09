@@ -1,5 +1,6 @@
 package com.vrms;
 
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 import com.vrms.application.AuthService;
@@ -7,8 +8,8 @@ import com.vrms.application.VehicleService;
 import com.vrms.domain.Manager;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
-import com.vrms.persistence.InMemoryManagerRepository;
-import com.vrms.persistence.InMemoryVehicleRepository;
+import com.vrms.persistence.FileManagerRepository;
+import com.vrms.persistence.FileVehicleRepository;
 import com.vrms.persistence.ManagerRepository;
 import com.vrms.persistence.VehicleRepository;
 import com.vrms.presentation.ManagerLoginController;
@@ -20,13 +21,19 @@ public class Main {
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
 
-        ManagerRepository managerRepository = new InMemoryManagerRepository();
-        managerRepository.save(new Manager("admin", "1234"));
+        ManagerRepository managerRepository = new FileManagerRepository(Paths.get("data", "managers.txt"));
 
-        VehicleRepository vehicleRepository = new InMemoryVehicleRepository();
-        vehicleRepository.save(new Vehicle("V001", "Toyota Corolla", "Car", VehicleStatus.AVAILABLE));
-        vehicleRepository.save(new Vehicle("V002", "BMW X5", "Car", VehicleStatus.RENTED));
-        vehicleRepository.save(new Vehicle("V003", "Ford Transit", "Van", VehicleStatus.AVAILABLE));
+        if (managerRepository.findByUsername("admin") == null) {
+            managerRepository.save(new Manager("admin", "1234"));
+        }
+
+        VehicleRepository vehicleRepository = new FileVehicleRepository(Paths.get("data", "vehicles.txt"));
+
+        if (vehicleRepository.findAll().isEmpty()) {
+            vehicleRepository.save(new Vehicle("V001", "Toyota Corolla", "Car", VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new Vehicle("V002", "BMW X5", "Car", VehicleStatus.RENTED));
+            vehicleRepository.save(new Vehicle("V003", "Ford Transit", "Van", VehicleStatus.AVAILABLE));
+        }
 
         AuthService authService = new AuthService(managerRepository);
         VehicleService vehicleService = new VehicleService(vehicleRepository);
@@ -51,6 +58,7 @@ public class Main {
 
                 System.out.print("Enter password: ");
                 String password = input.nextLine();
+
                 String result = loginController.login(username, password);
                 System.out.println(result);
 
@@ -68,6 +76,7 @@ public class Main {
                 System.out.println("2. Logout");
                 System.out.println("3. Exit");
                 System.out.print("Enter choice: ");
+
                 String choice = input.nextLine();
 
                 if (choice.equals("1")) {
@@ -81,6 +90,5 @@ public class Main {
                 }
             }
         }
-
     }
 }

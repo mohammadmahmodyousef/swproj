@@ -10,12 +10,18 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
-import com.vrms.persistence.InMemoryVehicleRepository;
+
+import com.vrms.persistence.FileVehicleRepository;
+import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.Path;
 import com.vrms.persistence.VehicleRepository;
 
 
 class VehicleServiceTest {
-	private VehicleService vehicleService;
+    @TempDir
+    Path tempDir;
+
+    private VehicleService vehicleService;
 	@BeforeAll
 	static void setUpBeforeClass() throws Exception {
 	}
@@ -24,14 +30,16 @@ class VehicleServiceTest {
 	static void tearDownAfterClass() throws Exception {
 	}
 
-	@BeforeEach
-    void setUp() {
-        VehicleRepository repository = new InMemoryVehicleRepository();
-        repository.save(new Vehicle("V001", "Toyota Corolla", "Car", VehicleStatus.AVAILABLE));
-        repository.save(new Vehicle("V002", "BMW X5", "Car", VehicleStatus.RENTED));
-        repository.save(new Vehicle("V003", "Ford Transit", "Van", VehicleStatus.AVAILABLE));
-        vehicleService = new VehicleService(repository);
-    }
+	 @BeforeEach
+	    void setUp() {
+	        VehicleRepository repository = new FileVehicleRepository(tempDir.resolve("vehicles.txt"));
+
+	        repository.save(new Vehicle("V001", "Toyota Corolla", "Car", VehicleStatus.AVAILABLE));
+	        repository.save(new Vehicle("V002", "BMW X5", "Car", VehicleStatus.RENTED));
+	        repository.save(new Vehicle("V003", "Ford Transit", "Van", VehicleStatus.AVAILABLE));
+
+	        vehicleService = new VehicleService(repository);
+	    }
 
     @AfterEach
     void tearDown() throws Exception {

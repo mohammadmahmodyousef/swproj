@@ -10,10 +10,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.Path;
+import java.util.List;
+import com.vrms.domain.Vehicle;
+import com.vrms.domain.VehicleStatus;
+class FileVehicleRepositoryTest {
+	 @TempDir
+	    Path tempDir;
 
-class InMemoryVehicleRepositoryTest {
-	private VehicleRepository repository;
-	@BeforeAll
+	    private VehicleRepository repository;	@BeforeAll
 	static void setUpBeforeClass() throws Exception {
 	}
 
@@ -21,9 +27,9 @@ class InMemoryVehicleRepositoryTest {
 	static void tearDownAfterClass() throws Exception {
 	}
 
-	@BeforeEach
+    @BeforeEach
     void setUp() {
-        repository = new InMemoryVehicleRepository();
+        repository = new FileVehicleRepository(tempDir.resolve("vehicles.txt"));
     }
 
     @AfterEach
@@ -36,8 +42,13 @@ class InMemoryVehicleRepositoryTest {
 
         repository.save(vehicle);
 
-        assertEquals(1, repository.findAll().size());
-        assertSame(vehicle, repository.findAll().get(0));
+        List<Vehicle> vehicles = repository.findAll();
+
+        assertEquals(1, vehicles.size());
+        assertEquals("V001", vehicles.get(0).getId());
+        assertEquals("Toyota Corolla", vehicles.get(0).getName());
+        assertEquals("Car", vehicles.get(0).getModel());
+        assertEquals(VehicleStatus.AVAILABLE, vehicles.get(0).getStatus());
     }
 
     @Test
@@ -56,7 +67,10 @@ class InMemoryVehicleRepositoryTest {
         repository.save(oldVehicle);
         repository.save(newVehicle);
 
-        assertEquals(1, repository.findAll().size());
-        assertSame(newVehicle, repository.findAll().get(0));
+        List<Vehicle> vehicles = repository.findAll();
+
+        assertEquals(1, vehicles.size());
+        assertEquals("New Vehicle", vehicles.get(0).getName());
+        assertEquals(VehicleStatus.RENTED, vehicles.get(0).getStatus());
     }
 }

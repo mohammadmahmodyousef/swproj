@@ -8,11 +8,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.vrms.domain.Manager;
-import com.vrms.persistence.InMemoryManagerRepository;
+import com.vrms.persistence.FileManagerRepository;
+import org.junit.jupiter.api.io.TempDir;
 import com.vrms.persistence.ManagerRepository;
-
+import java.nio.file.Path;
+import java.nio.file.Path;
 class AuthServiceTest {
-	private AuthService authService;
+	@TempDir
+    Path tempDir;
+
+    private AuthService authService;
 	@BeforeAll
 	static void setUpBeforeClass() throws Exception {
 	}
@@ -23,10 +28,8 @@ class AuthServiceTest {
 
 	@BeforeEach
     void setUp() {
-        ManagerRepository repository = new InMemoryManagerRepository();
-
-        repository.save( new Manager("admin", "1234")   );
-
+        ManagerRepository repository = new FileManagerRepository(tempDir.resolve("managers.txt"));
+        repository.save(new Manager("admin", "1234"));
         authService = new AuthService(repository);
     }
 
@@ -36,7 +39,9 @@ class AuthServiceTest {
 	}
 
 
-	@Test
+	
+
+    @Test
     void usernameExistsShouldReturnTrueWhenUsernameExists() {
         assertTrue(authService.usernameExists("admin"));
     }
@@ -64,7 +69,6 @@ class AuthServiceTest {
     @Test
     void isLoggedInShouldReturnTrueAfterSuccessfulLogin() {
         authService.login("admin", "1234");
-
         assertTrue(authService.isLoggedIn());
     }
 
@@ -76,16 +80,13 @@ class AuthServiceTest {
     @Test
     void logoutShouldRemoveLoggedInManager() {
         authService.login("admin", "1234");
-
         authService.logout();
-
         assertFalse(authService.isLoggedIn());
     }
 
     @Test
     void failedLoginShouldNotCreateLoginSession() {
         authService.login("admin", "5555");
-
         assertFalse(authService.isLoggedIn());
     }
 

@@ -27,10 +27,11 @@ public class AuthService {
         loggedInManager = null;
         return false;
     }
-    
+
     public void logout() {
         loggedInManager = null;
     }
+
     public boolean isLoggedIn() {
         return loggedInManager != null;
     }
