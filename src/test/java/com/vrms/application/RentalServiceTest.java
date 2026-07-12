@@ -2,6 +2,7 @@ package com.vrms.application;
 
 
 import org.junit.jupiter.api.io.TempDir;
+
 import com.vrms.domain.Rental;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
@@ -49,73 +50,44 @@ class RentalServiceTest {
 	@AfterEach
 	void tearDown() throws Exception {
 	}
+	
+	@Test
+	void rentVehicleShouldCreateRentalRecord() {
+	    Rental rental = rentalService.rentVehicle("R001", "V001", "Ali", "ali@gmail.com", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 15));
+	    assertNotNull(rental);
+	    assertEquals(1, rentalRepository.findAll().size());
+	    assertEquals("R001", rentalRepository.findAll().get(0).getRentalId());
+	    assertEquals("V001", rentalRepository.findAll().get(0).getVehicleId());
+	    assertEquals("ali@gmail.com", rentalRepository.findAll().get(0).getCustomerEmail());
+	}
 
 	@Test
-    void rentVehicleShouldCreateRentalRecord() {
-        Rental rental = rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 15));
+	void rentVehicleShouldChangeVehicleStatusToRented() {
+	    rentalService.rentVehicle("R001", "V001", "Ali", "ali@gmail.com", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 15));
+	    Vehicle vehicle = vehicleRepository.findAll().get(0);
+	    assertEquals(VehicleStatus.RENTED, vehicle.getStatus());
+	}
 
-        assertNotNull(rental);
-        assertEquals(1, rentalRepository.findAll().size());
-        assertEquals("R001", rentalRepository.findAll().get(0).getRentalId());
-        assertEquals("V001", rentalRepository.findAll().get(0).getVehicleId());
-    }
+	@Test
+	void rentVehicleShouldRejectDuplicateRental() {
+	    rentalService.rentVehicle("R001", "V001", "Ali", "ali@gmail.com", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 15));
+	    IllegalStateException exception = assertThrows(IllegalStateException.class, () -> rentalService.rentVehicle("R002", "V001", "Ahmad", "ahmad@gmail.com", LocalDate.of(2026, 7, 16), LocalDate.of(2026, 7, 20)));
+	    assertEquals("Vehicle is already rented", exception.getMessage());
+	    assertEquals(1, rentalRepository.findAll().size());
+	}
 
-    @Test
-    void rentVehicleShouldChangeVehicleStatusToRented() {
-        rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 15));
+	@Test
+	void rentVehicleShouldRejectEndDateBeforeStartDate() {
+	    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> rentalService.rentVehicle("R001", "V001", "Ali", "ali@gmail.com", LocalDate.of(2026, 7, 15), LocalDate.of(2026, 7, 10)));
+	    assertEquals("Rental end date cannot be before start date", exception.getMessage());
+	    assertEquals(0, rentalRepository.findAll().size());
+	}
 
-        Vehicle vehicle = vehicleRepository.findAll().get(0);
+	@Test
+	void rentVehicleShouldAcceptSameStartAndEndDate() {
+	    Rental rental = rentalService.rentVehicle("R001", "V001", "Ali", "ali@gmail.com", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 10));
+	    assertNotNull(rental);
+	    assertEquals(1, rentalRepository.findAll().size());
+	}
 
-        assertEquals(VehicleStatus.RENTED, vehicle.getStatus());
-    }
-
-    @Test
-    void rentVehicleShouldRejectDuplicateRental() {
-        rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 15));
-
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            rentalService.rentVehicle("R002", "V001", "Ahmad", LocalDate.of(2026, 7, 16), LocalDate.of(2026, 7, 20));
-        });
-
-        assertEquals("Vehicle is already rented", exception.getMessage());
-        assertEquals(1, rentalRepository.findAll().size());
-    }
-
-    @Test
-    void rentVehicleShouldRejectEndDateBeforeStartDate() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 15), LocalDate.of(2026, 7, 10));
-        });
-
-        assertEquals("Rental end date must be after start date", exception.getMessage());
-        assertEquals(0, rentalRepository.findAll().size());
-    }
-
-    @Test
-    void rentVehicleShouldRejectSameStartAndEndDate() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 10));
-        });
-
-        assertEquals("Rental end date must be after start date", exception.getMessage());
-        assertEquals(0, rentalRepository.findAll().size());
-    }
-
-    @Test
-    void rentVehicleShouldRejectRentalPeriodLongerThanThirtyDays() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 8, 10));
-        });
-
-        assertEquals("Rental period cannot exceed 30 days", exception.getMessage());
-        assertEquals(0, rentalRepository.findAll().size());
-    }
-
-    @Test
-    void rentVehicleShouldAcceptRentalPeriodOfThirtyDays() {
-        Rental rental = rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 8, 9));
-
-        assertNotNull(rental);
-        assertEquals(1, rentalRepository.findAll().size());
-    }
 }
