@@ -1,33 +1,41 @@
 package com.vrms.application;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import com.vrms.domain.Rental;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
+import com.vrms.notification.NotificationService;
 import com.vrms.persistence.RentalRepository;
 import com.vrms.persistence.VehicleRepository;
 
 public class RentalService {
 
-    private static final int MAX_RENTAL_DAYS = 30;
-
     private final RentalRepository rentalRepository;
     private final VehicleRepository vehicleRepository;
+    private final NotificationService notificationService;
 
     public RentalService(RentalRepository rentalRepository, VehicleRepository vehicleRepository) {
-        this.rentalRepository = rentalRepository;
-        this.vehicleRepository = vehicleRepository;
+        this(rentalRepository, vehicleRepository, null);
     }
 
-    public Rental rentVehicle(String rentalId, String vehicleId, String customerName, LocalDate startDate, LocalDate endDate) {
+    public RentalService(RentalRepository rentalRepository, VehicleRepository vehicleRepository, NotificationService notificationService) {
+        this.rentalRepository = rentalRepository;
+        this.vehicleRepository = vehicleRepository;
+        this.notificationService = notificationService;
+    }
+
+    public Rental rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate) {
         if (rentalRepository.findById(rentalId) != null) {
             throw new IllegalArgumentException("Rental ID already exists");
         }
 
         validateRentalPeriod(startDate, endDate);
+
+        if (customerEmail == null || customerEmail.trim().isEmpty()) {
+            throw new IllegalArgumentException("Customer email is required");
+        }
 
         Vehicle vehicle = findVehicleById(vehicleId);
 
@@ -39,11 +47,16 @@ public class RentalService {
             throw new IllegalStateException("Vehicle is already rented");
         }
 
-        Rental rental = new Rental(rentalId, vehicleId, customerName, startDate, endDate, true);
+        Rental rental = new Rental(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, true);
         rentalRepository.save(rental);
 
         vehicle.setStatus(VehicleStatus.RENTED);
         vehicleRepository.save(vehicle);
+
+        if (notificationService != null) {
+            String message = "Welcome " + customerName + "! Your rental " + rentalId + " for vehicle " + vehicleId + " has been confirmed from " + startDate + " until " + endDate + ".";
+            notificationService.sendRentalAccepted(rental, message);
+        }
 
         return rental;
     }
@@ -61,6 +74,7 @@ public class RentalService {
             throw new IllegalArgumentException("Rental end date cannot be before start date");
         }
     }
+
     private Vehicle findVehicleById(String vehicleId) {
         for (Vehicle vehicle : vehicleRepository.findAll()) {
             if (vehicle.getId().equals(vehicleId)) {

@@ -15,13 +15,13 @@ public class RentalController {
         this.authService = authService;
     }
 
-    public String rentVehicle(String rentalId, String vehicleId, String customerName, LocalDate startDate, LocalDate endDate) {
+    public String rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate) {
         if (!authService.isLoggedIn()) {
             return "Manager must login first";
         }
 
         try {
-            rentalService.rentVehicle(rentalId, vehicleId, customerName, startDate, endDate);
+            rentalService.rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate);
             return "Rental created successfully";
         } catch (IllegalArgumentException | IllegalStateException e) {
             return e.getMessage();
