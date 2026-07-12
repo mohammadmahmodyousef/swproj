@@ -46,7 +46,6 @@ class RentalServiceTest {
 
         rentalService = new RentalService(rentalRepository, vehicleRepository);
     }
-
 	@AfterEach
 	void tearDown() throws Exception {
 	}
@@ -82,4 +81,41 @@ class RentalServiceTest {
         assertEquals(1, rentalRepository.findAll().size());
     }
 
+    @Test
+    void rentVehicleShouldRejectEndDateBeforeStartDate() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 15), LocalDate.of(2026, 7, 10));
+        });
+
+        assertEquals("Rental end date must be after start date", exception.getMessage());
+        assertEquals(0, rentalRepository.findAll().size());
+    }
+
+    @Test
+    void rentVehicleShouldRejectSameStartAndEndDate() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 10));
+        });
+
+        assertEquals("Rental end date must be after start date", exception.getMessage());
+        assertEquals(0, rentalRepository.findAll().size());
+    }
+
+    @Test
+    void rentVehicleShouldRejectRentalPeriodLongerThanThirtyDays() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 8, 10));
+        });
+
+        assertEquals("Rental period cannot exceed 30 days", exception.getMessage());
+        assertEquals(0, rentalRepository.findAll().size());
+    }
+
+    @Test
+    void rentVehicleShouldAcceptRentalPeriodOfThirtyDays() {
+        Rental rental = rentalService.rentVehicle("R001", "V001", "Ali", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 8, 9));
+
+        assertNotNull(rental);
+        assertEquals(1, rentalRepository.findAll().size());
+    }
 }
