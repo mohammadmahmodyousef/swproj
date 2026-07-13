@@ -1,17 +1,24 @@
 package com.vrms;
 
-import java.time.LocalDate;
-
-import java.time.format.DateTimeParseException;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Scanner;
 
 import com.vrms.application.AuthService;
+import com.vrms.application.RentalExpiryReminderService;
+import com.vrms.application.RentalReturnService;
 import com.vrms.application.RentalService;
 import com.vrms.application.VehicleService;
+import com.vrms.application.strategy.DailyRentalPricingStrategy;
+import com.vrms.application.strategy.RentalPricingStrategy;
 import com.vrms.domain.Manager;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
+import com.vrms.notification.EmailNotificationService;
+import com.vrms.notification.EmailService;
+import com.vrms.notification.NotificationService;
 import com.vrms.persistence.FileManagerRepository;
 import com.vrms.persistence.FileRentalRepository;
 import com.vrms.persistence.FileVehicleRepository;
@@ -21,12 +28,8 @@ import com.vrms.persistence.VehicleRepository;
 import com.vrms.presentation.ManagerLoginController;
 import com.vrms.presentation.ManagerLogoutController;
 import com.vrms.presentation.RentalController;
+import com.vrms.presentation.RentalReturnController;
 import com.vrms.presentation.VehicleCatalogController;
-import java.util.List;
-import com.vrms.application.RentalExpiryReminderService;
-import com.vrms.notification.EmailNotificationService;
-import com.vrms.notification.EmailService;
-import com.vrms.notification.NotificationService;
 
 public class Main {
 
@@ -48,23 +51,28 @@ public class Main {
         }
 
         RentalRepository rentalRepository = new FileRentalRepository(Paths.get("data", "rentals.txt"));
+
         EmailService emailService = EmailService.fromEnvironment();
         NotificationService notificationService = new EmailNotificationService(emailService);
 
         AuthService authService = new AuthService(managerRepository);
         VehicleService vehicleService = new VehicleService(vehicleRepository);
         RentalService rentalService = new RentalService(rentalRepository, vehicleRepository, notificationService);
-        RentalExpiryReminderService reminderService =new RentalExpiryReminderService(rentalRepository, notificationService, 1);
-        
+        RentalExpiryReminderService reminderService = new RentalExpiryReminderService(rentalRepository, notificationService, 1);
+
+        RentalPricingStrategy pricingStrategy = new DailyRentalPricingStrategy(50);
+        RentalReturnService returnService = new RentalReturnService(rentalRepository, vehicleRepository, pricingStrategy);
+
         ManagerLoginController loginController = new ManagerLoginController(authService);
         ManagerLogoutController logoutController = new ManagerLogoutController(authService);
         VehicleCatalogController catalogController = new VehicleCatalogController(vehicleService, authService);
         RentalController rentalController = new RentalController(rentalService, authService);
+        RentalReturnController returnController = new RentalReturnController(returnService, authService);
 
         boolean running = true;
 
         while (running) {
-            while (!authService.isLoggedIn()) {
+            while (!authService.isLoggedIn() && running) {
                 System.out.print("Enter username: ");
                 String username = input.nextLine();
 
@@ -87,17 +95,23 @@ public class Main {
                 }
             }
 
+            if (!running) {
+                break;
+            }
+
             System.out.println("Welcome to Vehicle Rental Management System");
-            
+
             reminderService.generateExpiryReminders(LocalDate.now());
             reminderService.generateExpirationNotifications(LocalDate.now());
+
             while (authService.isLoggedIn() && running) {
                 System.out.println();
                 System.out.println("1. View available vehicles");
                 System.out.println("2. Rent a vehicle");
-                System.out.println("3. Generate rental notifications");
-                System.out.println("4. Logout");
-                System.out.println("5. Exit");
+                System.out.println("3. Return a vehicle");
+                System.out.println("4. Generate rental notifications");
+                System.out.println("5. Logout");
+                System.out.println("6. Exit");
                 System.out.print("Enter choice: ");
 
                 String choice = input.nextLine();
@@ -113,9 +127,10 @@ public class Main {
 
                     System.out.print("Enter customer name: ");
                     String customerName = input.nextLine();
-                    
+
                     System.out.print("Enter customer email: ");
                     String customerEmail = input.nextLine();
+
                     try {
                         System.out.print("Enter start date (yyyy-MM-dd): ");
                         LocalDate startDate = LocalDate.parse(input.nextLine());
@@ -128,27 +143,39 @@ public class Main {
                     } catch (DateTimeParseException e) {
                         System.out.println("Invalid date format");
                     }
-                    
-                }
-                else if (choice.equals("3")) {
-                List<String> reminders = reminderService.generateExpiryReminders(LocalDate.now());
-                List<String> expirationNotifications = reminderService.generateExpirationNotifications(LocalDate.now());
+                } else if (choice.equals("3")) {
+                    System.out.print("Enter rental ID: ");
+                    String rentalId = input.nextLine();
 
-                if (reminders.isEmpty() && expirationNotifications.isEmpty()) {
-                    System.out.println("No rental notifications found");
-                } else {
-                    System.out.println(reminders.size() + " expiry reminder(s) generated");
-                    System.out.println(expirationNotifications.size() + " expiration notification(s) generated");
-                  }
-                }
-                else if (choice.equals("4")) {
-                    System.out.println(logoutController.logout());
+                    try {
+                        System.out.print("Enter return date (yyyy-MM-dd): ");
+                        LocalDate returnDate = LocalDate.parse(input.nextLine());
+
+                        String result = returnController.returnVehicle(rentalId, returnDate);
+                        System.out.println(result);
+                    } catch (DateTimeParseException e) {
+                        System.out.println("Invalid date format");
+                    }
+                } else if (choice.equals("4")) {
+                    List<String> reminders = reminderService.generateExpiryReminders(LocalDate.now());
+                    List<String> expirationNotifications = reminderService.generateExpirationNotifications(LocalDate.now());
+
+                    if (reminders.isEmpty() && expirationNotifications.isEmpty()) {
+                        System.out.println("No rental notifications found");
+                    } else {
+                        System.out.println(reminders.size() + " expiry reminder(s) generated");
+                        System.out.println(expirationNotifications.size() + " expiration notification(s) generated");
+                    }
                 } else if (choice.equals("5")) {
+                    System.out.println(logoutController.logout());
+                } else if (choice.equals("6")) {
                     running = false;
                 } else {
                     System.out.println("Invalid choice");
                 }
             }
         }
+
+        input.close();
     }
 }

@@ -66,7 +66,10 @@ class RentalExpiryReminderServiceTest {
 
         reminderService.generateExpiryReminders(LocalDate.of(2026, 7, 12));
 
-        verify(notificationService, times(1)).sendExpiryReminder(any(Rental.class), contains("expires on 2026-07-13"));
+        verify(notificationService, times(1)).sendExpiryReminder(
+            any(Rental.class),
+            contains("expires tomorrow on 2026-07-13")
+        );
     }
 
     @Test
