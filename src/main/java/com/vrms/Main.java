@@ -11,7 +11,9 @@ import com.vrms.application.RentalExpiryReminderService;
 import com.vrms.application.RentalReturnService;
 import com.vrms.application.RentalService;
 import com.vrms.application.VehicleService;
+import com.vrms.application.strategy.DailyLateReturnPenaltyStrategy;
 import com.vrms.application.strategy.DailyRentalPricingStrategy;
+import com.vrms.application.strategy.LateReturnPenaltyStrategy;
 import com.vrms.application.strategy.RentalPricingStrategy;
 import com.vrms.domain.Manager;
 import com.vrms.domain.Vehicle;
@@ -61,7 +63,8 @@ public class Main {
         RentalExpiryReminderService reminderService = new RentalExpiryReminderService(rentalRepository, notificationService, 1);
 
         RentalPricingStrategy pricingStrategy = new DailyRentalPricingStrategy(50);
-        RentalReturnService returnService = new RentalReturnService(rentalRepository, vehicleRepository, pricingStrategy);
+        LateReturnPenaltyStrategy penaltyStrategy = new DailyLateReturnPenaltyStrategy(20);
+        RentalReturnService returnService = new RentalReturnService(rentalRepository, vehicleRepository, pricingStrategy, penaltyStrategy);
 
         ManagerLoginController loginController = new ManagerLoginController(authService);
         ManagerLogoutController logoutController = new ManagerLogoutController(authService);

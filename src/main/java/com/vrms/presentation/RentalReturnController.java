@@ -28,6 +28,9 @@ public class RentalReturnController {
                     + "\nRental ID: " + result.getRentalId()
                     + "\nVehicle ID: " + result.getVehicleId()
                     + "\nRental days: " + result.getRentalDays()
+                    + "\nLate days: " + result.getLateDays()
+                    + "\nRental cost: $" + String.format("%.2f", result.getRentalCost())
+                    + "\nLate penalty: $" + String.format("%.2f", result.getLatePenalty())
                     + "\nTotal cost: $" + String.format("%.2f", result.getTotalCost());
         } catch (IllegalArgumentException | IllegalStateException e) {
             return e.getMessage();
