@@ -3,6 +3,7 @@ package com.vrms.application;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
+import com.vrms.application.strategy.LateReturnPenaltyStrategy;
 import com.vrms.application.strategy.RentalPricingStrategy;
 import com.vrms.domain.Rental;
 import com.vrms.domain.Vehicle;
@@ -15,11 +16,13 @@ public class RentalReturnService {
     private final RentalRepository rentalRepository;
     private final VehicleRepository vehicleRepository;
     private final RentalPricingStrategy pricingStrategy;
+    private final LateReturnPenaltyStrategy penaltyStrategy;
 
-    public RentalReturnService(RentalRepository rentalRepository, VehicleRepository vehicleRepository, RentalPricingStrategy pricingStrategy) {
+    public RentalReturnService(RentalRepository rentalRepository, VehicleRepository vehicleRepository, RentalPricingStrategy pricingStrategy, LateReturnPenaltyStrategy penaltyStrategy) {
         this.rentalRepository = rentalRepository;
         this.vehicleRepository = vehicleRepository;
         this.pricingStrategy = pricingStrategy;
+        this.penaltyStrategy = penaltyStrategy;
     }
 
     public RentalReturnResult returnVehicle(String rentalId, LocalDate returnDate) {
@@ -57,7 +60,15 @@ public class RentalReturnService {
             rentalDays = 1;
         }
 
-        double totalCost = pricingStrategy.calculateCost(rentalDays);
+        long lateDays = 0;
+
+        if (returnDate.isAfter(rental.getEndDate())) {
+            lateDays = ChronoUnit.DAYS.between(rental.getEndDate(), returnDate);
+        }
+
+        double rentalCost = pricingStrategy.calculateCost(rentalDays);
+        double latePenalty = penaltyStrategy.calculatePenalty(lateDays);
+        double totalCost = rentalCost + latePenalty;
 
         rental.setActive(false);
         rentalRepository.save(rental);
@@ -65,7 +76,7 @@ public class RentalReturnService {
         vehicle.setStatus(VehicleStatus.AVAILABLE);
         vehicleRepository.save(vehicle);
 
-        return new RentalReturnResult(rental.getRentalId(), rental.getVehicleId(), rentalDays, totalCost);
+        return new RentalReturnResult(rental.getRentalId(), rental.getVehicleId(), rentalDays, lateDays, rentalCost, latePenalty, totalCost);
     }
 
     private Rental findRentalById(String rentalId) {

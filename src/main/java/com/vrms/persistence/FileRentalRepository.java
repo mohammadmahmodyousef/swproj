@@ -10,15 +10,29 @@ import java.util.List;
 
 import com.vrms.domain.Rental;
 
+/**
+ * Stores and manages rental records inside a text file.
+ * Each rental is saved as one line in the file.
+ */
+
 public class FileRentalRepository implements RentalRepository {
 
+ 
     private final Path filePath;
 
+    /**
+     * Creates the repository and prepares the rental file.
+     *
+     * @param filePath path of the rental data file
+     */
     public FileRentalRepository(Path filePath) {
         this.filePath = filePath;
         createFile();
     }
 
+    /**
+     * Creates the required folders and rental file if they do not exist.
+     */
     private void createFile() {
         try {
             if (filePath.getParent() != null) {
@@ -33,6 +47,11 @@ public class FileRentalRepository implements RentalRepository {
         }
     }
 
+    /**
+     * Saves a new rental or updates an existing rental with the same ID.
+     *
+     * @param rental rental record to save
+     */
     @Override
     public void save(Rental rental) {
         List<Rental> rentals = findAll();
@@ -53,6 +72,11 @@ public class FileRentalRepository implements RentalRepository {
         writeAll(rentals);
     }
 
+    /**
+     * Reads and returns all rental records from the file.
+     *
+     * @return list containing all rentals
+     */
     @Override
     public List<Rental> findAll() {
         List<Rental> rentals = new ArrayList<>();
@@ -72,6 +96,12 @@ public class FileRentalRepository implements RentalRepository {
         return rentals;
     }
 
+    /**
+     * Searches for a rental using its rental ID.
+     *
+     * @param rentalId ID of the rental
+     * @return matching rental, or null when it is not found
+     */
     @Override
     public Rental findById(String rentalId) {
         for (Rental rental : findAll()) {
@@ -83,6 +113,12 @@ public class FileRentalRepository implements RentalRepository {
         return null;
     }
 
+    /**
+     * Checks whether a vehicle currently has an active rental.
+     *
+     * @param vehicleId ID of the vehicle
+     * @return true when an active rental exists, otherwise false
+     */
     @Override
     public boolean hasActiveRentalForVehicle(String vehicleId) {
         for (Rental rental : findAll()) {
@@ -94,6 +130,11 @@ public class FileRentalRepository implements RentalRepository {
         return false;
     }
 
+    /**
+     * Rewrites the rental file using the provided rental list.
+     *
+     * @param rentals rentals that will be written to the file
+     */
     private void writeAll(List<Rental> rentals) {
         List<String> lines = new ArrayList<>();
 

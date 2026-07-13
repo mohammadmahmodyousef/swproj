@@ -9,7 +9,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.vrms.application.strategy.DailyLateReturnPenaltyStrategy;
 import com.vrms.application.strategy.DailyRentalPricingStrategy;
+import com.vrms.application.strategy.LateReturnPenaltyStrategy;
 import com.vrms.application.strategy.RentalPricingStrategy;
 import com.vrms.domain.Rental;
 import com.vrms.domain.Vehicle;
@@ -40,9 +42,10 @@ class RentalReturnServiceTest {
         rentalRepository.save(rental);
 
         RentalPricingStrategy pricingStrategy = new DailyRentalPricingStrategy(50);
-        returnService = new RentalReturnService(rentalRepository, vehicleRepository, pricingStrategy);
-    }
+        LateReturnPenaltyStrategy penaltyStrategy = new DailyLateReturnPenaltyStrategy(20);
 
+        returnService = new RentalReturnService(rentalRepository, vehicleRepository, pricingStrategy, penaltyStrategy);
+    }
     @Test
     void returnVehicleShouldMakeVehicleAvailable() {
         returnService.returnVehicle("R001", LocalDate.of(2026, 7, 15));
@@ -62,18 +65,52 @@ class RentalReturnServiceTest {
     }
 
     @Test
-    void returnVehicleShouldCalculateCorrectTotal() {
+    void returnVehicleShouldCalculateCorrectTotalWithoutPenalty() {
         RentalReturnResult result = returnService.returnVehicle("R001", LocalDate.of(2026, 7, 15));
 
         assertEquals(5, result.getRentalDays());
+        assertEquals(0, result.getLateDays());
+        assertEquals(250.0, result.getRentalCost(), 0.001);
+        assertEquals(0.0, result.getLatePenalty(), 0.001);
         assertEquals(250.0, result.getTotalCost(), 0.001);
     }
 
     @Test
-    void sameDayRentalShouldCostOneDay() {
+    void lateReturnShouldCalculatePenaltyCorrectly() {
+        RentalReturnResult result = returnService.returnVehicle("R001", LocalDate.of(2026, 7, 17));
+
+        assertEquals(7, result.getRentalDays());
+        assertEquals(2, result.getLateDays());
+        assertEquals(350.0, result.getRentalCost(), 0.001);
+        assertEquals(40.0, result.getLatePenalty(), 0.001);
+        assertEquals(390.0, result.getTotalCost(), 0.001);
+    }
+
+    @Test
+    void oneLateDayShouldApplyOneDayPenalty() {
+        RentalReturnResult result = returnService.returnVehicle("R001", LocalDate.of(2026, 7, 16));
+
+        assertEquals(1, result.getLateDays());
+        assertEquals(20.0, result.getLatePenalty(), 0.001);
+        assertEquals(320.0, result.getTotalCost(), 0.001);
+    }
+
+    @Test
+    void earlyReturnShouldNotApplyPenalty() {
+        RentalReturnResult result = returnService.returnVehicle("R001", LocalDate.of(2026, 7, 13));
+
+        assertEquals(3, result.getRentalDays());
+        assertEquals(0, result.getLateDays());
+        assertEquals(0.0, result.getLatePenalty(), 0.001);
+        assertEquals(150.0, result.getTotalCost(), 0.001);
+    }
+
+    @Test
+    void sameDayRentalShouldCostOneDayWithoutPenalty() {
         RentalReturnResult result = returnService.returnVehicle("R001", LocalDate.of(2026, 7, 10));
 
         assertEquals(1, result.getRentalDays());
+        assertEquals(0, result.getLateDays());
         assertEquals(50.0, result.getTotalCost(), 0.001);
     }
 
@@ -85,4 +122,4 @@ class RentalReturnServiceTest {
 
         assertEquals("Rental is already closed", exception.getMessage());
     }
-}
+    }
