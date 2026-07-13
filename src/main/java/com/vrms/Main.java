@@ -15,8 +15,12 @@ import com.vrms.application.strategy.DailyLateReturnPenaltyStrategy;
 import com.vrms.application.strategy.DailyRentalPricingStrategy;
 import com.vrms.application.strategy.LateReturnPenaltyStrategy;
 import com.vrms.application.strategy.RentalPricingStrategy;
+import com.vrms.domain.Car;
+import com.vrms.domain.ElectricVehicle;
 import com.vrms.domain.Manager;
-import com.vrms.domain.Vehicle;
+import com.vrms.domain.Motorcycle;
+import com.vrms.domain.Truck;
+import com.vrms.domain.Van;
 import com.vrms.domain.VehicleStatus;
 import com.vrms.notification.EmailNotificationService;
 import com.vrms.notification.EmailService;
@@ -47,9 +51,11 @@ public class Main {
         VehicleRepository vehicleRepository = new FileVehicleRepository(Paths.get("data", "vehicles.txt"));
 
         if (vehicleRepository.findAll().isEmpty()) {
-            vehicleRepository.save(new Vehicle("V001", "Toyota Corolla", "Car", VehicleStatus.AVAILABLE));
-            vehicleRepository.save(new Vehicle("V002", "BMW X5", "Car", VehicleStatus.RENTED));
-            vehicleRepository.save(new Vehicle("V003", "Ford Transit", "Van", VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new Car("V001", "Toyota Corolla", "2024", VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new Motorcycle("V002", "Honda CBR", "2023", VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new Van("V003", "Ford Transit", "2024", VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new Truck("V004", "Mercedes Actros", "2022", VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new ElectricVehicle("V005", "Tesla Model 3", "2025", VehicleStatus.AVAILABLE, 80));
         }
 
         RentalRepository rentalRepository = new FileRentalRepository(Paths.get("data", "rentals.txt"));
@@ -134,6 +140,19 @@ public class Main {
                     System.out.print("Enter customer email: ");
                     String customerEmail = input.nextLine();
 
+                    int customerAge;
+
+                    try {
+                        System.out.print("Enter customer age: ");
+                        customerAge = Integer.parseInt(input.nextLine());
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid customer age");
+                        continue;
+                    }
+
+                    System.out.print("Does the customer have a special truck license? (yes/no): ");
+                    boolean hasSpecialLicense = input.nextLine().trim().equalsIgnoreCase("yes");
+
                     try {
                         System.out.print("Enter start date (yyyy-MM-dd): ");
                         LocalDate startDate = LocalDate.parse(input.nextLine());
@@ -141,7 +160,7 @@ public class Main {
                         System.out.print("Enter end date (yyyy-MM-dd): ");
                         LocalDate endDate = LocalDate.parse(input.nextLine());
 
-                        String result = rentalController.rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate);
+                        String result = rentalController.rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, customerAge, hasSpecialLicense);
                         System.out.println(result);
                     } catch (DateTimeParseException e) {
                         System.out.println("Invalid date format");
@@ -178,7 +197,5 @@ public class Main {
                 }
             }
         }
-
-        input.close();
     }
 }

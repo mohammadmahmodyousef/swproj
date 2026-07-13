@@ -16,13 +16,17 @@ public class RentalController {
     }
 
     public String rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate) {
+        return rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, 18, false);
+    }
+
+    public String rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate, int customerAge, boolean hasSpecialLicense) {
         if (!authService.isLoggedIn()) {
-            return "Manager must login first";
+            return "Please login first";
         }
 
         try {
-            rentalService.rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate);
-            return "Rental created successfully";
+            rentalService.rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, customerAge, hasSpecialLicense);
+            return "Vehicle rented successfully";
         } catch (IllegalArgumentException | IllegalStateException e) {
             return e.getMessage();
         }

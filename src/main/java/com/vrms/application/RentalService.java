@@ -27,6 +27,10 @@ public class RentalService {
     }
 
     public Rental rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate) {
+        return rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, 18, false);
+    }
+
+    public Rental rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate, int customerAge, boolean hasSpecialLicense) {
         if (rentalRepository.findById(rentalId) != null) {
             throw new IllegalArgumentException("Rental ID already exists");
         }
@@ -47,6 +51,8 @@ public class RentalService {
             throw new IllegalStateException("Vehicle is already rented");
         }
 
+        vehicle.validateRental(customerAge, hasSpecialLicense);
+
         Rental rental = new Rental(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, true);
         rentalRepository.save(rental);
 
@@ -54,7 +60,15 @@ public class RentalService {
         vehicleRepository.save(vehicle);
 
         if (notificationService != null) {
-            String message = "Welcome " + customerName + "! Your rental " + rentalId + " for vehicle " + vehicleId + " has been confirmed from " + startDate + " until " + endDate + ".";
+            String message = "Hello " + customerName
+                    + ",\n\nYour rental has been successfully confirmed."
+                    + "\nRental ID: " + rentalId
+                    + "\nVehicle ID: " + vehicleId
+                    + "\nVehicle type: " + vehicle.getType()
+                    + "\nStart date: " + startDate
+                    + "\nEnd date: " + endDate
+                    + "\n\nThank you for using VRMS.";
+
             notificationService.sendRentalAccepted(rental, message);
         }
 
