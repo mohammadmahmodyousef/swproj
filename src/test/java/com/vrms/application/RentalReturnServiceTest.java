@@ -1,9 +1,15 @@
 package com.vrms.application;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +22,7 @@ import com.vrms.application.strategy.RentalPricingStrategy;
 import com.vrms.domain.Rental;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
+import com.vrms.notification.NotificationService;
 import com.vrms.persistence.FileRentalRepository;
 import com.vrms.persistence.FileVehicleRepository;
 import com.vrms.persistence.RentalRepository;
@@ -122,4 +129,30 @@ class RentalReturnServiceTest {
 
         assertEquals("Rental is already closed", exception.getMessage());
     }
+    @Test
+    void earlyReturnShouldSendEmailNotification() {
+        RentalRepository rentalRepository = mock(RentalRepository.class);
+        VehicleRepository vehicleRepository = mock(VehicleRepository.class);
+        RentalPricingStrategy pricingStrategy = mock(RentalPricingStrategy.class);
+        LateReturnPenaltyStrategy penaltyStrategy = mock(LateReturnPenaltyStrategy.class);
+        NotificationService notificationService = mock(NotificationService.class);
+        Vehicle vehicle = mock(Vehicle.class);
+
+        Rental rental = new Rental("R001","V001","Ali","ali@gmail.com",LocalDate.of(2026,7,1),LocalDate.of(2026,7,20),true);
+
+        when(rentalRepository.findAll()).thenReturn(List.of(rental));
+        when(vehicleRepository.findAll()).thenReturn(List.of(vehicle));
+        when(vehicle.getId()).thenReturn("V001");
+        when(pricingStrategy.calculateCost(9)).thenReturn(450.0);
+        when(penaltyStrategy.calculatePenalty(0)).thenReturn(0.0);
+
+        RentalReturnService returnService = new RentalReturnService(rentalRepository,vehicleRepository,pricingStrategy,penaltyStrategy,notificationService);
+
+        RentalReturnResult result = returnService.returnVehicle("R001",LocalDate.of(2026,7,10));
+
+        assertEquals(9,result.getRentalDays());
+        assertEquals(0,result.getLateDays());
+        assertEquals(450.0,result.getTotalCost(),0.001);
+        verify(notificationService).sendRentalReturned(same(rental),contains("returned before the scheduled end date"));
     }
+}

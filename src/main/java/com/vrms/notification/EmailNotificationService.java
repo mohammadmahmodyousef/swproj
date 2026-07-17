@@ -11,17 +11,27 @@ public class EmailNotificationService implements NotificationService {
     }
 
     @Override
-    public void sendRentalAccepted(Rental rental, String message) {
-        emailService.sendEmail(rental.getCustomerEmail(), "Vehicle Rental Confirmation - " + rental.getRentalId(), message);
+    public void sendRentalAccepted(Rental rental,String message) {
+        emailService.sendEmail(rental.getCustomerEmail(),"Vehicle Rental Confirmation - " + rental.getRentalId(),message);
     }
 
     @Override
-    public void sendExpiryReminder(Rental rental, String message) {
-        emailService.sendEmail(rental.getCustomerEmail(), "Rental Expiry Reminder", message);
+    public void sendExpiryReminder(Rental rental,String message) {
+        emailService.sendEmail(rental.getCustomerEmail(),"Rental Expiry Reminder - " + rental.getRentalId(),message);
     }
 
     @Override
-    public void sendRentalExpired(Rental rental, String message) {
-        emailService.sendEmail(rental.getCustomerEmail(), "Rental Period Ended", message);
+    public void sendRentalExpired(Rental rental,String message) {
+        emailService.sendEmail(rental.getCustomerEmail(),"Rental Period Ended - " + rental.getRentalId(),message);
+    }
+
+    @Override
+    public void sendRentalExtended(Rental rental,String message) {
+        emailService.sendEmail(rental.getCustomerEmail(),"Rental Period Extended - " + rental.getRentalId(),message);
+    }
+
+    @Override
+    public void sendRentalReturned(Rental rental,String message) {
+        emailService.sendEmail(rental.getCustomerEmail(),"Vehicle Return Confirmation - " + rental.getRentalId(),message);
     }
 }

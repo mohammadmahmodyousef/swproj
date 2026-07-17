@@ -1,6 +1,8 @@
 package com.vrms.application;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.vrms.domain.Rental;
@@ -12,30 +14,32 @@ import com.vrms.persistence.VehicleRepository;
 
 public class RentalService {
 
+    private static final long MAX_RENTAL_DAYS = 30;
+
     private final RentalRepository rentalRepository;
     private final VehicleRepository vehicleRepository;
     private final NotificationService notificationService;
 
-    public RentalService(RentalRepository rentalRepository, VehicleRepository vehicleRepository) {
-        this(rentalRepository, vehicleRepository, null);
+    public RentalService(RentalRepository rentalRepository,VehicleRepository vehicleRepository) {
+        this(rentalRepository,vehicleRepository,null);
     }
 
-    public RentalService(RentalRepository rentalRepository, VehicleRepository vehicleRepository, NotificationService notificationService) {
+    public RentalService(RentalRepository rentalRepository,VehicleRepository vehicleRepository,NotificationService notificationService) {
         this.rentalRepository = rentalRepository;
         this.vehicleRepository = vehicleRepository;
         this.notificationService = notificationService;
     }
 
-    public Rental rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate) {
-        return rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, 18, false);
+    public Rental rentVehicle(String rentalId,String vehicleId,String customerName,String customerEmail,LocalDate startDate,LocalDate endDate) {
+        return rentVehicle(rentalId,vehicleId,customerName,customerEmail,startDate,endDate,18,false);
     }
 
-    public Rental rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate, int customerAge, boolean hasSpecialLicense) {
+    public Rental rentVehicle(String rentalId,String vehicleId,String customerName,String customerEmail,LocalDate startDate,LocalDate endDate,int customerAge,boolean hasSpecialLicense) {
         if (rentalRepository.findById(rentalId) != null) {
             throw new IllegalArgumentException("Rental ID already exists");
         }
 
-        validateRentalPeriod(startDate, endDate);
+        validateRentalPeriod(startDate,endDate);
 
         if (customerEmail == null || customerEmail.trim().isEmpty()) {
             throw new IllegalArgumentException("Customer email is required");
@@ -51,9 +55,9 @@ public class RentalService {
             throw new IllegalStateException("Vehicle is already rented");
         }
 
-        vehicle.validateRental(customerAge, hasSpecialLicense);
+        vehicle.validateRental(customerAge,hasSpecialLicense);
 
-        Rental rental = new Rental(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, true);
+        Rental rental = new Rental(rentalId,vehicleId,customerName,customerEmail,startDate,endDate,true);
         rentalRepository.save(rental);
 
         vehicle.setStatus(VehicleStatus.RENTED);
@@ -69,7 +73,7 @@ public class RentalService {
                     + "\nEnd date: " + endDate
                     + "\n\nThank you for using VRMS.";
 
-            notificationService.sendRentalAccepted(rental, message);
+            notificationService.sendRentalAccepted(rental,message);
         }
 
         return rental;
@@ -79,13 +83,81 @@ public class RentalService {
         return rentalRepository.findAll();
     }
 
-    private void validateRentalPeriod(LocalDate startDate, LocalDate endDate) {
+    public List<Rental> getActiveRentals() {
+        List<Rental> activeRentals = new ArrayList<>();
+
+        for (Rental rental : rentalRepository.findAll()) {
+            if (rental.isActive()) {
+                activeRentals.add(rental);
+            }
+        }
+
+        return activeRentals;
+    }
+
+    public Rental extendRental(String rentalId,LocalDate newEndDate) {
+        if (rentalId == null || rentalId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Rental ID is required");
+        }
+
+        if (newEndDate == null) {
+            throw new IllegalArgumentException("New end date is required");
+        }
+
+        Rental rental = rentalRepository.findById(rentalId);
+
+        if (rental == null) {
+            throw new IllegalArgumentException("Rental not found");
+        }
+
+        if (!rental.isActive()) {
+            throw new IllegalStateException("Only active rentals can be extended");
+        }
+
+        LocalDate previousEndDate = rental.getEndDate();
+
+        if (!newEndDate.isAfter(previousEndDate)) {
+            throw new IllegalArgumentException("New end date must be after current end date");
+        }
+
+        long totalRentalDays = ChronoUnit.DAYS.between(rental.getStartDate(),newEndDate);
+
+        if (totalRentalDays > MAX_RENTAL_DAYS) {
+            throw new IllegalArgumentException("Rental period cannot exceed 30 days");
+        }
+
+        rental.setEndDate(newEndDate);
+        rental.setExpiryReminderSent(false);
+        rental.setExpirationEmailSent(false);
+        rentalRepository.save(rental);
+
+        if (notificationService != null) {
+            String message = "Hello " + rental.getCustomerName()
+                    + ",\n\nYour vehicle rental period has been successfully extended."
+                    + "\nRental ID: " + rental.getRentalId()
+                    + "\nVehicle ID: " + rental.getVehicleId()
+                    + "\nPrevious end date: " + previousEndDate
+                    + "\nNew end date: " + newEndDate
+                    + "\n\nThank you for using VRMS.";
+
+            notificationService.sendRentalExtended(rental,message);
+        }
+
+        return rental;
+    }
+    private void validateRentalPeriod(LocalDate startDate,LocalDate endDate) {
         if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Rental dates are required");
         }
 
         if (endDate.isBefore(startDate)) {
             throw new IllegalArgumentException("Rental end date cannot be before start date");
+        }
+
+        long rentalDays = ChronoUnit.DAYS.between(startDate,endDate);
+
+        if (rentalDays > MAX_RENTAL_DAYS) {
+            throw new IllegalArgumentException("Rental period cannot exceed 30 days");
         }
     }
 

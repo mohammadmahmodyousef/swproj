@@ -42,41 +42,39 @@ public class Main {
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
 
-        ManagerRepository managerRepository = new FileManagerRepository(Paths.get("data", "managers.txt"));
+        ManagerRepository managerRepository = new FileManagerRepository(Paths.get("data","managers.txt"));
 
         if (managerRepository.findByUsername("admin") == null) {
-            managerRepository.save(new Manager("admin", "1234"));
+            managerRepository.save(new Manager("admin","1234"));
         }
 
-        VehicleRepository vehicleRepository = new FileVehicleRepository(Paths.get("data", "vehicles.txt"));
+        VehicleRepository vehicleRepository = new FileVehicleRepository(Paths.get("data","vehicles.txt"));
 
         if (vehicleRepository.findAll().isEmpty()) {
-            vehicleRepository.save(new Car("V001", "Toyota Corolla", "2024", VehicleStatus.AVAILABLE));
-            vehicleRepository.save(new Motorcycle("V002", "Honda CBR", "2023", VehicleStatus.AVAILABLE));
-            vehicleRepository.save(new Van("V003", "Ford Transit", "2024", VehicleStatus.AVAILABLE));
-            vehicleRepository.save(new Truck("V004", "Mercedes Actros", "2022", VehicleStatus.AVAILABLE));
-            vehicleRepository.save(new ElectricVehicle("V005", "Tesla Model 3", "2025", VehicleStatus.AVAILABLE, 80));
+            vehicleRepository.save(new Car("V001","Toyota Corolla","2024",VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new Motorcycle("V002","Honda CBR","2023",VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new Van("V003","Ford Transit","2024",VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new Truck("V004","Mercedes Actros","2022",VehicleStatus.AVAILABLE));
+            vehicleRepository.save(new ElectricVehicle("V005","Tesla Model 3","2025",VehicleStatus.AVAILABLE,80));
         }
 
-        RentalRepository rentalRepository = new FileRentalRepository(Paths.get("data", "rentals.txt"));
+        RentalRepository rentalRepository = new FileRentalRepository(Paths.get("data","rentals.txt"));
 
         EmailService emailService = EmailService.fromEnvironment();
         NotificationService notificationService = new EmailNotificationService(emailService);
 
         AuthService authService = new AuthService(managerRepository);
         VehicleService vehicleService = new VehicleService(vehicleRepository);
-        RentalService rentalService = new RentalService(rentalRepository, vehicleRepository, notificationService);
-        RentalExpiryReminderService reminderService = new RentalExpiryReminderService(rentalRepository, notificationService, 1);
+        RentalService rentalService = new RentalService(rentalRepository,vehicleRepository,notificationService);
+        RentalExpiryReminderService reminderService = new RentalExpiryReminderService(rentalRepository,notificationService,1);
 
         RentalPricingStrategy pricingStrategy = new DailyRentalPricingStrategy(50);
         LateReturnPenaltyStrategy penaltyStrategy = new DailyLateReturnPenaltyStrategy(20);
-        RentalReturnService returnService = new RentalReturnService(rentalRepository, vehicleRepository, pricingStrategy, penaltyStrategy);
-
-        ManagerLoginController loginController = new ManagerLoginController(authService);
+        RentalReturnService returnService = new RentalReturnService(rentalRepository,vehicleRepository,pricingStrategy,penaltyStrategy,notificationService);        ManagerLoginController loginController = new ManagerLoginController(authService);
         ManagerLogoutController logoutController = new ManagerLogoutController(authService);
-        VehicleCatalogController catalogController = new VehicleCatalogController(vehicleService, authService);
-        RentalController rentalController = new RentalController(rentalService, authService);
-        RentalReturnController returnController = new RentalReturnController(returnService, authService);
+        VehicleCatalogController catalogController = new VehicleCatalogController(vehicleService,authService);
+        RentalController rentalController = new RentalController(rentalService,authService);
+        RentalReturnController returnController = new RentalReturnController(returnService,authService);
 
         boolean running = true;
 
@@ -95,7 +93,7 @@ public class Main {
                 System.out.print("Enter password: ");
                 String password = input.nextLine();
 
-                String result = loginController.login(username, password);
+                String result = loginController.login(username,password);
                 System.out.println(result);
 
                 if (!authService.isLoggedIn()) {
@@ -117,10 +115,12 @@ public class Main {
                 System.out.println();
                 System.out.println("1. View available vehicles");
                 System.out.println("2. Rent a vehicle");
-                System.out.println("3. Return a vehicle");
-                System.out.println("4. Generate rental notifications");
-                System.out.println("5. Logout");
-                System.out.println("6. Exit");
+                System.out.println("3. View active rentals");
+                System.out.println("4. Extend rental period");
+                System.out.println("5. Return a vehicle");
+                System.out.println("6. Generate rental notifications");
+                System.out.println("7. Logout");
+                System.out.println("8. Exit");
                 System.out.print("Enter choice: ");
 
                 String choice = input.nextLine();
@@ -160,12 +160,27 @@ public class Main {
                         System.out.print("Enter end date (yyyy-MM-dd): ");
                         LocalDate endDate = LocalDate.parse(input.nextLine());
 
-                        String result = rentalController.rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, customerAge, hasSpecialLicense);
+                        String result = rentalController.rentVehicle(rentalId,vehicleId,customerName,customerEmail,startDate,endDate,customerAge,hasSpecialLicense);
                         System.out.println(result);
                     } catch (DateTimeParseException e) {
                         System.out.println("Invalid date format");
                     }
                 } else if (choice.equals("3")) {
+                    System.out.println(rentalController.viewActiveRentals());
+                } else if (choice.equals("4")) {
+                    System.out.print("Enter rental ID: ");
+                    String rentalId = input.nextLine();
+
+                    try {
+                        System.out.print("Enter new end date (yyyy-MM-dd): ");
+                        LocalDate newEndDate = LocalDate.parse(input.nextLine());
+
+                        String result = rentalController.extendRental(rentalId,newEndDate);
+                        System.out.println(result);
+                    } catch (DateTimeParseException e) {
+                        System.out.println("Invalid date format");
+                    }
+                } else if (choice.equals("5")) {
                     System.out.print("Enter rental ID: ");
                     String rentalId = input.nextLine();
 
@@ -173,12 +188,12 @@ public class Main {
                         System.out.print("Enter return date (yyyy-MM-dd): ");
                         LocalDate returnDate = LocalDate.parse(input.nextLine());
 
-                        String result = returnController.returnVehicle(rentalId, returnDate);
+                        String result = returnController.returnVehicle(rentalId,returnDate);
                         System.out.println(result);
                     } catch (DateTimeParseException e) {
                         System.out.println("Invalid date format");
                     }
-                } else if (choice.equals("4")) {
+                } else if (choice.equals("6")) {
                     List<String> reminders = reminderService.generateExpiryReminders(LocalDate.now());
                     List<String> expirationNotifications = reminderService.generateExpirationNotifications(LocalDate.now());
 
@@ -188,9 +203,9 @@ public class Main {
                         System.out.println(reminders.size() + " expiry reminder(s) generated");
                         System.out.println(expirationNotifications.size() + " expiration notification(s) generated");
                     }
-                } else if (choice.equals("5")) {
+                } else if (choice.equals("7")) {
                     System.out.println(logoutController.logout());
-                } else if (choice.equals("6")) {
+                } else if (choice.equals("8")) {
                     running = false;
                 } else {
                     System.out.println("Invalid choice");
