@@ -8,6 +8,7 @@ import com.vrms.application.strategy.RentalPricingStrategy;
 import com.vrms.domain.Rental;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
+import com.vrms.notification.NotificationService;
 import com.vrms.persistence.RentalRepository;
 import com.vrms.persistence.VehicleRepository;
 
@@ -17,15 +18,21 @@ public class RentalReturnService {
     private final VehicleRepository vehicleRepository;
     private final RentalPricingStrategy pricingStrategy;
     private final LateReturnPenaltyStrategy penaltyStrategy;
+    private final NotificationService notificationService;
 
-    public RentalReturnService(RentalRepository rentalRepository, VehicleRepository vehicleRepository, RentalPricingStrategy pricingStrategy, LateReturnPenaltyStrategy penaltyStrategy) {
+    public RentalReturnService(RentalRepository rentalRepository,VehicleRepository vehicleRepository,RentalPricingStrategy pricingStrategy,LateReturnPenaltyStrategy penaltyStrategy) {
+        this(rentalRepository,vehicleRepository,pricingStrategy,penaltyStrategy,null);
+    }
+
+    public RentalReturnService(RentalRepository rentalRepository,VehicleRepository vehicleRepository,RentalPricingStrategy pricingStrategy,LateReturnPenaltyStrategy penaltyStrategy,NotificationService notificationService) {
         this.rentalRepository = rentalRepository;
         this.vehicleRepository = vehicleRepository;
         this.pricingStrategy = pricingStrategy;
         this.penaltyStrategy = penaltyStrategy;
+        this.notificationService = notificationService;
     }
 
-    public RentalReturnResult returnVehicle(String rentalId, LocalDate returnDate) {
+    public RentalReturnResult returnVehicle(String rentalId,LocalDate returnDate) {
         if (rentalId == null || rentalId.trim().isEmpty()) {
             throw new IllegalArgumentException("Rental ID is required");
         }
@@ -54,7 +61,9 @@ public class RentalReturnService {
             throw new IllegalArgumentException("Vehicle not found");
         }
 
-        long rentalDays = ChronoUnit.DAYS.between(rental.getStartDate(), returnDate);
+        boolean earlyReturn = returnDate.isBefore(rental.getEndDate());
+
+        long rentalDays = ChronoUnit.DAYS.between(rental.getStartDate(),returnDate);
 
         if (rentalDays == 0) {
             rentalDays = 1;
@@ -63,7 +72,7 @@ public class RentalReturnService {
         long lateDays = 0;
 
         if (returnDate.isAfter(rental.getEndDate())) {
-            lateDays = ChronoUnit.DAYS.between(rental.getEndDate(), returnDate);
+            lateDays = ChronoUnit.DAYS.between(rental.getEndDate(),returnDate);
         }
 
         double rentalCost = pricingStrategy.calculateCost(rentalDays);
@@ -76,7 +85,38 @@ public class RentalReturnService {
         vehicle.setStatus(VehicleStatus.AVAILABLE);
         vehicleRepository.save(vehicle);
 
-        return new RentalReturnResult(rental.getRentalId(), rental.getVehicleId(), rentalDays, lateDays, rentalCost, latePenalty, totalCost);
+        RentalReturnResult result = new RentalReturnResult(rental.getRentalId(),rental.getVehicleId(),rentalDays,lateDays,rentalCost,latePenalty,totalCost);
+
+        if (notificationService != null) {
+            String returnStatus;
+
+            if (earlyReturn) {
+                returnStatus = "The vehicle was returned before the scheduled end date.";
+            } else if (lateDays > 0) {
+                returnStatus = "The vehicle was returned " + lateDays + " day(s) late.";
+            } else {
+                returnStatus = "The vehicle was returned on the scheduled date.";
+            }
+
+            String message = "Hello " + rental.getCustomerName()
+                    + ",\n\nYour vehicle return has been successfully completed."
+                    + "\n" + returnStatus
+                    + "\nRental ID: " + rental.getRentalId()
+                    + "\nVehicle ID: " + rental.getVehicleId()
+                    + "\nRental start date: " + rental.getStartDate()
+                    + "\nScheduled end date: " + rental.getEndDate()
+                    + "\nActual return date: " + returnDate
+                    + "\nRental days: " + rentalDays
+                    + "\nLate days: " + lateDays
+                    + "\nRental cost: $" + String.format("%.2f",rentalCost)
+                    + "\nLate penalty: $" + String.format("%.2f",latePenalty)
+                    + "\nTotal cost: $" + String.format("%.2f",totalCost)
+                    + "\n\nThank you for using VRMS.";
+
+            notificationService.sendRentalReturned(rental,message);
+        }
+
+        return result;
     }
 
     private Rental findRentalById(String rentalId) {

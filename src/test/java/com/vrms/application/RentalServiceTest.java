@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.vrms.domain.Rental;
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
+import com.vrms.notification.NotificationService;
 import com.vrms.persistence.FileRentalRepository;
 import com.vrms.persistence.FileVehicleRepository;
 import com.vrms.persistence.RentalRepository;
@@ -13,6 +14,11 @@ import com.vrms.persistence.VehicleRepository;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -82,7 +88,24 @@ class RentalServiceTest {
 	    assertEquals("Rental end date cannot be before start date", exception.getMessage());
 	    assertEquals(0, rentalRepository.findAll().size());
 	}
+	@Test
+	void extendRentalShouldSendEmailNotification() {
+	    RentalRepository rentalRepository = mock(RentalRepository.class);
+	    VehicleRepository vehicleRepository = mock(VehicleRepository.class);
+	    NotificationService notificationService = mock(NotificationService.class);
 
+	    Rental rental = new Rental("R001","V001","Ali","ali@gmail.com",LocalDate.of(2026,7,1),LocalDate.of(2026,7,10),true);
+
+	    when(rentalRepository.findById("R001")).thenReturn(rental);
+
+	    RentalService rentalService = new RentalService(rentalRepository,vehicleRepository,notificationService);
+
+	    Rental result = rentalService.extendRental("R001",LocalDate.of(2026,7,20));
+
+	    assertEquals(LocalDate.of(2026,7,20),result.getEndDate());
+	    verify(rentalRepository).save(rental);
+	    verify(notificationService).sendRentalExtended(same(rental),contains("New end date: 2026-07-20"));
+	}
 	@Test
 	void rentVehicleShouldAcceptSameStartAndEndDate() {
 	    Rental rental = rentalService.rentVehicle("R001", "V001", "Ali", "ali@gmail.com", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 10));

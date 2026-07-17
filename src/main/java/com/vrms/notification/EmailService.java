@@ -1,8 +1,11 @@
 package com.vrms.notification;
 
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
 import java.util.Properties;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.mail.Address;
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
@@ -17,7 +20,7 @@ public class EmailService {
     private final String username;
     private final String password;
 
-    public EmailService(String username, String password) {
+    public EmailService(String username,String password) {
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("Email username is required");
         }
@@ -26,8 +29,8 @@ public class EmailService {
             throw new IllegalArgumentException("Email password is required");
         }
 
-        this.username = username;
-        this.password = password;
+        this.username = username.trim();
+        this.password = password.trim();
     }
 
     public static EmailService fromEnvironment() {
@@ -36,39 +39,61 @@ public class EmailService {
         String username = dotenv.get("EMAIL_USERNAME");
         String password = dotenv.get("EMAIL_PASSWORD");
 
-        return new EmailService(username, password);
+        if (username == null || username.trim().isEmpty()) {
+            username = System.getenv("EMAIL_USERNAME");
+        }
+
+        if (password == null || password.trim().isEmpty()) {
+            password = System.getenv("EMAIL_PASSWORD");
+        }
+
+        return new EmailService(username,password);
     }
 
-    public void sendEmail(String to, String subject, String body) {
-        if (to == null || to.trim().isEmpty()) {
+    public void sendEmail(String recipient,String subject,String body) {
+        if (recipient == null || recipient.trim().isEmpty()) {
             throw new IllegalArgumentException("Recipient email is required");
         }
 
-        Properties properties = new Properties();
-        properties.put("mail.smtp.auth", "true");
-        properties.put("mail.smtp.starttls.enable", "true");
-        properties.put("mail.smtp.host", "smtp.gmail.com");
-        properties.put("mail.smtp.port", "587");
+        if (subject == null || subject.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email subject is required");
+        }
 
-        Session session = Session.getInstance(properties, new Authenticator() {
+        if (body == null || body.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email body is required");
+        }
+
+        Properties properties = new Properties();
+        properties.put("mail.smtp.auth","true");
+        properties.put("mail.smtp.starttls.enable","true");
+        properties.put("mail.smtp.starttls.required","true");
+        properties.put("mail.smtp.host","smtp.gmail.com");
+        properties.put("mail.smtp.port","587");
+        properties.put("mail.smtp.ssl.trust","smtp.gmail.com");
+        properties.put("mail.smtp.connectiontimeout","10000");
+        properties.put("mail.smtp.timeout","10000");
+        properties.put("mail.smtp.writetimeout","10000");
+
+        Session session = Session.getInstance(properties,new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(username, password);
+                return new PasswordAuthentication(username,password);
             }
         });
 
         try {
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(username));
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
-            message.setSubject(subject);
-            message.setText(body);
+            MimeMessage message = new MimeMessage(session);
+
+            message.setFrom(new InternetAddress(username,"VRMS Vehicle Rental System","UTF-8"));
+            message.setReplyTo(new Address[] {new InternetAddress(username)});
+            message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(recipient.trim()));
+            message.setSubject(subject.trim(),"UTF-8");
+            message.setText(body,"UTF-8");
+            message.setSentDate(new Date());
 
             Transport.send(message);
-
-            System.out.println("Email sent successfully to " + to);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send email", e);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            throw new RuntimeException("Failed to send email",e);
         }
     }
 }
