@@ -786,9 +786,9 @@ Maximum team size: three students.
 
 | Member | Student ID | Responsibilities |
 |---|---|---|
-| `<Student 1 Name>` | `<ID>` | `<Responsibilities>` |
-| `<Student 2 Name>` | `<ID>` | `<Responsibilities>` |
-| `<Student 3 Name>` | `<ID>` | `<Responsibilities>` |
+| `<Mohammad Abu Salamah>` | `<12324141>` | `<It was divided equally amongst us, sprints were divided equally to ensure that the code was reviewed by multiple developers.>` |
+| `<Student 2 Name>` | `<ID>` | `<It was divided equally amongst us, sprints were divided equally to ensure that the code was reviewed by multiple developers.>` |
+| `<Student 3 Name>` | `<ID>` | `<It was divided equally amongst us, sprints were divided equally to ensure that the code was reviewed by multiple developers.>` |
 
 ---
 
