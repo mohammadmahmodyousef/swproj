@@ -787,7 +787,7 @@ Maximum team size: three students.
 | Member | Student ID | Responsibilities |
 |---|---|---|
 | `Mohammad Abu Salamah` | `12324141` | `It was divided equally amongst us, sprints were divided equally to ensure that the code was reviewed by multiple developers.` |
-| `<Student 2 Name>` | `<ID>` | `It was divided equally amongst us, sprints were divided equally to ensure that the code was reviewed by multiple developers.` |
+| `Yousef Khayat` | `12323154` | `It was divided equally amongst us, sprints were divided equally to ensure that the code was reviewed by multiple developers.` |
 | `Mahmoud Zaben` | `12326051` | `It was divided equally amongst us, sprints were divided equally to ensure that the code was reviewed by multiple developers.` |
 
 ---
