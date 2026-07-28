@@ -38,4 +38,4 @@ jobs:
  -Dsonar.organization=your-org-name
  env:
  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
- SONAR_TOKEN: ${{ secrets.
+ SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
