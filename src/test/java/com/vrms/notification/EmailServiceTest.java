@@ -107,7 +107,7 @@ class EmailServiceTest {
         Message message = sentMessage.get();
 
         assertNotNull(message);
-        assertEquals("sender@gmail.com",message.getFrom()[0].toString());
+        assertEquals("sender@gmail.com", ((jakarta.mail.internet.InternetAddress) message.getFrom()[0]).getAddress());
         assertEquals("receiver@gmail.com",message.getAllRecipients()[0].toString());
         assertEquals("Rental confirmation",message.getSubject());
         assertEquals("Your rental is confirmed",message.getContent());
