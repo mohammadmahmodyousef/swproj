@@ -42,7 +42,7 @@ jobs:
           args: >
             -Dsonar.projectKey=MohammadAbuSalamah_swproj
             -Dsonar.organization=mohammadmahmodyousef
+        run: mvn -B jacoco:prepare-agent verify jacoco:report org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.coverage.exclusions=**/Main.java -Dsonar.projectKey=SENov2023_github_action_2023_SE_tutorial
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B jacoco:prepare-agent verify jacoco:report org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.coverage.exclusions=**/Main.java -Dsonar.projectKey=SENov2023_github_action_2023_SE_tutorial
