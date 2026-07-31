@@ -6,7 +6,7 @@ import java.util.List;
 import com.vrms.application.AuthService;
 import com.vrms.application.RentalService;
 import com.vrms.domain.Rental;
-
+import com.vrms.application.RentalRequest;
 public class RentalController {
 
     private final RentalService rentalService;
@@ -27,7 +27,7 @@ public class RentalController {
         }
 
         try {
-            rentalService.rentVehicle(rentalId,vehicleId,customerName,customerEmail,startDate,endDate,customerAge,hasSpecialLicense);
+            rentalService.rentVehicle(new RentalRequest(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, customerAge, hasSpecialLicense));
             return "Vehicle rented successfully";
         } catch (IllegalArgumentException | IllegalStateException e) {
             return e.getMessage();

@@ -49,7 +49,8 @@ public class EmailService {
 
         return new EmailService(username,password);
     }
-
+    private static final String DEFAULT_TIMEOUT_MS = "10000";
+    private static final String DEFAULT_ENCODING = "UTF-8";
     public void sendEmail(String recipient,String subject,String body) {
         if (recipient == null || recipient.trim().isEmpty()) {
             throw new IllegalArgumentException("Recipient email is required");
@@ -70,9 +71,9 @@ public class EmailService {
         properties.put("mail.smtp.host","smtp.gmail.com");
         properties.put("mail.smtp.port","587");
         properties.put("mail.smtp.ssl.trust","smtp.gmail.com");
-        properties.put("mail.smtp.connectiontimeout","10000");
-        properties.put("mail.smtp.timeout","10000");
-        properties.put("mail.smtp.writetimeout","10000");
+        properties.put("mail.smtp.connectiontimeout", DEFAULT_TIMEOUT_MS);
+        properties.put("mail.smtp.timeout", DEFAULT_TIMEOUT_MS);
+        properties.put("mail.smtp.writetimeout", DEFAULT_TIMEOUT_MS);
 
         Session session = Session.getInstance(properties,new Authenticator() {
             @Override
@@ -84,11 +85,11 @@ public class EmailService {
         try {
             MimeMessage message = new MimeMessage(session);
 
-            message.setFrom(new InternetAddress(username,"VRMS Vehicle Rental System","UTF-8"));
-            message.setReplyTo(new Address[] {new InternetAddress(username)});
-            message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(recipient.trim()));
-            message.setSubject(subject.trim(),"UTF-8");
-            message.setText(body,"UTF-8");
+            message.setFrom(new InternetAddress(username, "VRMS Vehicle Rental System", DEFAULT_ENCODING));
+            message.setReplyTo(new Address[] { new InternetAddress(username) });
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient.trim()));
+            message.setSubject(subject.trim(), DEFAULT_ENCODING);
+            message.setText(body, DEFAULT_ENCODING);
             message.setSentDate(new Date());
 
             Transport.send(message);

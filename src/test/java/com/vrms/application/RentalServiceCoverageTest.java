@@ -74,7 +74,7 @@ class RentalServiceCoverageTest {
     void shouldRentVehicleAndSendConfirmationNotification() {
         RentalService service = new RentalService(rentalRepository,vehicleRepository,notificationService);
 
-        Rental rental = service.rentVehicle("R002","V001","Ahmad","ahmad@gmail.com",LocalDate.of(2026,8,1),LocalDate.of(2026,8,5),25,true);
+        Rental rental = service.rentVehicle(new RentalRequest("R002","V001","Ahmad","ahmad@gmail.com",LocalDate.of(2026,8,1),LocalDate.of(2026,8,5),25,true));
 
         assertNotNull(rental);
         assertEquals("Ahmad",rental.getCustomerName());
@@ -92,7 +92,7 @@ class RentalServiceCoverageTest {
     void notificationMessageShouldContainRentalInformation() {
         RentalService service = new RentalService(rentalRepository,vehicleRepository,notificationService);
 
-        Rental rental = service.rentVehicle("R100","V001","Mona","mona@gmail.com",LocalDate.of(2026,9,1),LocalDate.of(2026,9,10),30,false);
+        Rental rental = service.rentVehicle(new RentalRequest("R100","V001","Mona","mona@gmail.com",LocalDate.of(2026,9,1),LocalDate.of(2026,9,10),30,false));
 
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(notificationService).sendRentalAccepted(same(rental),messageCaptor.capture());

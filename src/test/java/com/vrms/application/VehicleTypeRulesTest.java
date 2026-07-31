@@ -72,7 +72,6 @@ class VehicleTypeRulesTest {
 
         assertNotNull(rentalService.rentVehicle("R001", "V001", "Ali", "ali@gmail.com", LocalDate.of(2026, 7, 20), LocalDate.of(2026, 7, 25), 30, true));
     }
-
     @Test
     void motorcycleShouldRejectCustomerUnderEighteen() {
         vehicleRepository.save(new Motorcycle("V001", "Honda CBR", "2023", VehicleStatus.AVAILABLE));

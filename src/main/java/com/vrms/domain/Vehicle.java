@@ -43,6 +43,8 @@ public class Vehicle {
     }
 
     public void validateRental(int customerAge, boolean hasSpecialLicense) {
+     // Base Vehicle class provides a default validation implementation with no extra age or license restrictions.
+     // Specific vehicle subclasses (e.g., Truck) override this method to enforce specific rules.
     }
 
     protected String getExtraData() {

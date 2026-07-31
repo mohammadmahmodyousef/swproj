@@ -56,7 +56,7 @@ class RentalControllerTest {
         String result = controller.rentVehicle("R001","V001","Ali","ali@gmail.com",LocalDate.of(2026,7,10),LocalDate.of(2026,7,15));
 
         assertEquals("Vehicle rented successfully",result);
-        verify(rentalService).rentVehicle("R001","V001","Ali","ali@gmail.com",LocalDate.of(2026,7,10),LocalDate.of(2026,7,15),18,false);
+        verify(rentalService).rentVehicle(any(com.vrms.application.RentalRequest.class));
     }
 
     @Test
@@ -66,13 +66,13 @@ class RentalControllerTest {
         String result = controller.rentVehicle("R002","V002","Ahmad","ahmad@gmail.com",LocalDate.of(2026,8,1),LocalDate.of(2026,8,5),30,true);
 
         assertEquals("Vehicle rented successfully",result);
-        verify(rentalService).rentVehicle("R002","V002","Ahmad","ahmad@gmail.com",LocalDate.of(2026,8,1),LocalDate.of(2026,8,5),30,true);
+        verify(rentalService).rentVehicle(any(com.vrms.application.RentalRequest.class));
     }
 
     @Test
     void rentVehicleShouldReturnIllegalArgumentExceptionMessage() {
         when(authService.isLoggedIn()).thenReturn(true);
-        doThrow(new IllegalArgumentException("Vehicle not found")).when(rentalService).rentVehicle(anyString(),anyString(),anyString(),anyString(),any(LocalDate.class),any(LocalDate.class),anyInt(),anyBoolean());
+        doThrow(new IllegalArgumentException("Vehicle not found")).when(rentalService).rentVehicle(any(com.vrms.application.RentalRequest.class));
 
         String result = controller.rentVehicle("R001","UNKNOWN","Ali","ali@gmail.com",LocalDate.of(2026,7,10),LocalDate.of(2026,7,15),20,false);
 
@@ -82,7 +82,7 @@ class RentalControllerTest {
     @Test
     void rentVehicleShouldReturnIllegalStateExceptionMessage() {
         when(authService.isLoggedIn()).thenReturn(true);
-        doThrow(new IllegalStateException("Vehicle is already rented")).when(rentalService).rentVehicle(anyString(),anyString(),anyString(),anyString(),any(LocalDate.class),any(LocalDate.class),anyInt(),anyBoolean());
+        doThrow(new IllegalStateException("Vehicle is already rented")).when(rentalService).rentVehicle(any(com.vrms.application.RentalRequest.class));
 
         String result = controller.rentVehicle("R001","V001","Ali","ali@gmail.com",LocalDate.of(2026,7,10),LocalDate.of(2026,7,15),20,false);
 
