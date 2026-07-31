@@ -39,9 +39,6 @@ import com.vrms.presentation.VehicleCatalogController;
 
 public class Main {
 
-    private static final String PROMPT_RENTAL_ID = "Enter rental ID: ";
-    private static final String MSG_INVALID_DATE_FORMAT = "Invalid date format";
-
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
 
@@ -73,9 +70,7 @@ public class Main {
 
         RentalPricingStrategy pricingStrategy = new DailyRentalPricingStrategy(50);
         LateReturnPenaltyStrategy penaltyStrategy = new DailyLateReturnPenaltyStrategy(20);
-        RentalReturnService returnService = new RentalReturnService(rentalRepository,vehicleRepository,pricingStrategy,penaltyStrategy,notificationService);
-
-        ManagerLoginController loginController = new ManagerLoginController(authService);
+        RentalReturnService returnService = new RentalReturnService(rentalRepository,vehicleRepository,pricingStrategy,penaltyStrategy,notificationService);        ManagerLoginController loginController = new ManagerLoginController(authService);
         ManagerLogoutController logoutController = new ManagerLogoutController(authService);
         VehicleCatalogController catalogController = new VehicleCatalogController(vehicleService,authService);
         RentalController rentalController = new RentalController(rentalService,authService);
@@ -84,7 +79,30 @@ public class Main {
         boolean running = true;
 
         while (running) {
-            if (!performLogin(input, authService, loginController)) {
+            while (!authService.isLoggedIn() && running) {
+                System.out.print("Enter username: ");
+                String username = input.nextLine();
+
+                if (!loginController.usernameExists(username)) {
+                    System.out.println("Username does not exist.");
+                    System.out.println("Please try again.");
+                    System.out.println();
+                    continue;
+                }
+
+                System.out.print("Enter password: ");
+                String password = input.nextLine();
+
+                String result = loginController.login(username,password);
+                System.out.println(result);
+
+                if (!authService.isLoggedIn()) {
+                    System.out.println("Please try again.");
+                    System.out.println();
+                }
+            }
+
+            if (!running) {
                 break;
             }
 
@@ -93,165 +111,107 @@ public class Main {
             reminderService.generateExpiryReminders(LocalDate.now());
             reminderService.generateExpirationNotifications(LocalDate.now());
 
-            running = processUserMenu(input, authService, catalogController, rentalController, returnController, logoutController, reminderService);
-        }
-    }
-
-    private static boolean performLogin(Scanner input, AuthService authService, ManagerLoginController loginController) {
-        while (!authService.isLoggedIn()) {
-            System.out.print("Enter username: ");
-            String username = input.nextLine();
-
-            if (!loginController.usernameExists(username)) {
-                System.out.println("Username does not exist.");
-                System.out.println("Please try again.");
+            while (authService.isLoggedIn() && running) {
                 System.out.println();
-                continue;
-            }
+                System.out.println("1. View available vehicles");
+                System.out.println("2. Rent a vehicle");
+                System.out.println("3. View active rentals");
+                System.out.println("4. Extend rental period");
+                System.out.println("5. Return a vehicle");
+                System.out.println("6. Generate rental notifications");
+                System.out.println("7. Logout");
+                System.out.println("8. Exit");
+                System.out.print("Enter choice: ");
 
-            System.out.print("Enter password: ");
-            String password = input.nextLine();
+                String choice = input.nextLine();
 
-            String result = loginController.login(username, password);
-            System.out.println(result);
-
-            if (!authService.isLoggedIn()) {
-                System.out.println("Please try again.");
-                System.out.println();
-            }
-        }
-        return true;
-    }
-
-    private static boolean processUserMenu(Scanner input, AuthService authService, VehicleCatalogController catalogController,
-                                           RentalController rentalController, RentalReturnController returnController,
-                                           ManagerLogoutController logoutController, RentalExpiryReminderService reminderService) {
-        while (authService.isLoggedIn()) {
-            printMenuOptions();
-            String choice = input.nextLine();
-
-            switch (choice) {
-                case "1":
+                if (choice.equals("1")) {
                     System.out.println(catalogController.viewAvailableVehicles());
-                    break;
-                case "2":
-                    handleVehicleRental(input, rentalController);
-                    break;
-                case "3":
+                } else if (choice.equals("2")) {
+                    System.out.print("Enter rental ID: ");
+                    String rentalId = input.nextLine();
+
+                    System.out.print("Enter vehicle ID: ");
+                    String vehicleId = input.nextLine();
+
+                    System.out.print("Enter customer name: ");
+                    String customerName = input.nextLine();
+
+                    System.out.print("Enter customer email: ");
+                    String customerEmail = input.nextLine();
+
+                    int customerAge;
+
+                    try {
+                        System.out.print("Enter customer age: ");
+                        customerAge = Integer.parseInt(input.nextLine());
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid customer age");
+                        continue;
+                    }
+
+                    System.out.print("Does the customer have a special truck license? (yes/no): ");
+                    boolean hasSpecialLicense = input.nextLine().trim().equalsIgnoreCase("yes");
+
+                    try {
+                        System.out.print("Enter start date (yyyy-MM-dd): ");
+                        LocalDate startDate = LocalDate.parse(input.nextLine());
+
+                        System.out.print("Enter end date (yyyy-MM-dd): ");
+                        LocalDate endDate = LocalDate.parse(input.nextLine());
+
+                        String result = rentalController.rentVehicle(rentalId,vehicleId,customerName,customerEmail,startDate,endDate,customerAge,hasSpecialLicense);
+                        System.out.println(result);
+                    } catch (DateTimeParseException e) {
+                        System.out.println("Invalid date format");
+                    }
+                } else if (choice.equals("3")) {
                     System.out.println(rentalController.viewActiveRentals());
-                    break;
-                case "4":
-                    handleRentalExtension(input, rentalController);
-                    break;
-                case "5":
-                    handleVehicleReturn(input, returnController);
-                    break;
-                case "6":
-                    handleNotifications(reminderService);
-                    break;
-                case "7":
+                } else if (choice.equals("4")) {
+                    System.out.print("Enter rental ID: ");
+                    String rentalId = input.nextLine();
+
+                    try {
+                        System.out.print("Enter new end date (yyyy-MM-dd): ");
+                        LocalDate newEndDate = LocalDate.parse(input.nextLine());
+
+                        String result = rentalController.extendRental(rentalId,newEndDate);
+                        System.out.println(result);
+                    } catch (DateTimeParseException e) {
+                        System.out.println("Invalid date format");
+                    }
+                } else if (choice.equals("5")) {
+                    System.out.print("Enter rental ID: ");
+                    String rentalId = input.nextLine();
+
+                    try {
+                        System.out.print("Enter return date (yyyy-MM-dd): ");
+                        LocalDate returnDate = LocalDate.parse(input.nextLine());
+
+                        String result = returnController.returnVehicle(rentalId,returnDate);
+                        System.out.println(result);
+                    } catch (DateTimeParseException e) {
+                        System.out.println("Invalid date format");
+                    }
+                } else if (choice.equals("6")) {
+                    List<String> reminders = reminderService.generateExpiryReminders(LocalDate.now());
+                    List<String> expirationNotifications = reminderService.generateExpirationNotifications(LocalDate.now());
+
+                    if (reminders.isEmpty() && expirationNotifications.isEmpty()) {
+                        System.out.println("No rental notifications found");
+                    } else {
+                        System.out.println(reminders.size() + " expiry reminder(s) generated");
+                        System.out.println(expirationNotifications.size() + " expiration notification(s) generated");
+                    }
+                } else if (choice.equals("7")) {
                     System.out.println(logoutController.logout());
-                    break;
-                case "8":
-                    return false;
-                default:
+                } else if (choice.equals("8")) {
+                    running = false;
+                } else {
                     System.out.println("Invalid choice");
+                }
             }
-        }
-        return true;
-    }
-
-    private static void printMenuOptions() {
-        System.out.println();
-        System.out.println("1. View available vehicles");
-        System.out.println("2. Rent a vehicle");
-        System.out.println("3. View active rentals");
-        System.out.println("4. Extend rental period");
-        System.out.println("5. Return a vehicle");
-        System.out.println("6. Generate rental notifications");
-        System.out.println("7. Logout");
-        System.out.println("8. Exit");
-        System.out.print("Enter choice: ");
-    }
-
-    private static void handleVehicleRental(Scanner input, RentalController rentalController) {
-        System.out.print(PROMPT_RENTAL_ID);
-        String rentalId = input.nextLine();
-
-        System.out.print("Enter vehicle ID: ");
-        String vehicleId = input.nextLine();
-
-        System.out.print("Enter customer name: ");
-        String customerName = input.nextLine();
-
-        System.out.print("Enter customer email: ");
-        String customerEmail = input.nextLine();
-
-        int customerAge;
-        try {
-            System.out.print("Enter customer age: ");
-            customerAge = Integer.parseInt(input.nextLine());
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid customer age");
-            return;
-        }
-
-        System.out.print("Does the customer have a special truck license? (yes/no): ");
-        boolean hasSpecialLicense = input.nextLine().trim().equalsIgnoreCase("yes");
-
-        try {
-            System.out.print("Enter start date (yyyy-MM-dd): ");
-            LocalDate startDate = LocalDate.parse(input.nextLine());
-
-            System.out.print("Enter end date (yyyy-MM-dd): ");
-            LocalDate endDate = LocalDate.parse(input.nextLine());
-
-            String result = rentalController.rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, customerAge, hasSpecialLicense);
-            System.out.println(result);
-        } catch (DateTimeParseException e) {
-            System.out.println(MSG_INVALID_DATE_FORMAT);
-        }
-    }
-
-    private static void handleRentalExtension(Scanner input, RentalController rentalController) {
-        System.out.print(PROMPT_RENTAL_ID);
-        String rentalId = input.nextLine();
-
-        try {
-            System.out.print("Enter new end date (yyyy-MM-dd): ");
-            LocalDate newEndDate = LocalDate.parse(input.nextLine());
-
-            String result = rentalController.extendRental(rentalId, newEndDate);
-            System.out.println(result);
-        } catch (DateTimeParseException e) {
-            System.out.println(MSG_INVALID_DATE_FORMAT);
-        }
-    }
-
-    private static void handleVehicleReturn(Scanner input, RentalReturnController returnController) {
-        System.out.print(PROMPT_RENTAL_ID);
-        String rentalId = input.nextLine();
-
-        try {
-            System.out.print("Enter return date (yyyy-MM-dd): ");
-            LocalDate returnDate = LocalDate.parse(input.nextLine());
-
-            String result = returnController.returnVehicle(rentalId, returnDate);
-            System.out.println(result);
-        } catch (DateTimeParseException e) {
-            System.out.println(MSG_INVALID_DATE_FORMAT);
-        }
-    }
-
-    private static void handleNotifications(RentalExpiryReminderService reminderService) {
-        List<String> reminders = reminderService.generateExpiryReminders(LocalDate.now());
-        List<String> expirationNotifications = reminderService.generateExpirationNotifications(LocalDate.now());
-
-        if (reminders.isEmpty() && expirationNotifications.isEmpty()) {
-            System.out.println("No rental notifications found");
-        } else {
-            System.out.println(reminders.size() + " expiry reminder(s) generated");
-            System.out.println(expirationNotifications.size() + " expiration notification(s) generated");
         }
     }
 }
+
