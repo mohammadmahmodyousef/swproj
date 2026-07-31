@@ -36,6 +36,5 @@ jobs:
 
       - name: Build, Test with JaCoCo and Scan with SonarCloud
         run: mvn -B clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.organization=mohammadmahmodyousef -Dsonar.projectKey=mohammadmahmodyousef_swproj -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml 
-        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
