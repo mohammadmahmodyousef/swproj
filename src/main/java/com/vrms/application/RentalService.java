@@ -1,11 +1,12 @@
 package com.vrms.application;
 
 import java.time.LocalDate;
+
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-
 import com.vrms.domain.Rental;
+
 import com.vrms.domain.Vehicle;
 import com.vrms.domain.VehicleStatus;
 import com.vrms.notification.NotificationService;
@@ -46,46 +47,58 @@ public class RentalService {
     }
 
     public Rental rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate) {
-        return rentVehicle(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, 18, false);
+        return rentVehicle(new RentalRequest(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, 18, false));
     }
 
     public Rental rentVehicle(String rentalId, String vehicleId, String customerName, String customerEmail, LocalDate startDate, LocalDate endDate, int customerAge, boolean hasSpecialLicense) {
-        if (rentalRepository.findById(rentalId) != null) {
+        return rentVehicle(new RentalRequest(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, customerAge, hasSpecialLicense));
+    }
+
+    public Rental rentVehicle(RentalRequest request) {
+        if (rentalRepository.findById(request.getRentalId()) != null) {
             throw new IllegalArgumentException("Rental ID already exists");
         }
 
-        validateRentalPeriod(startDate, endDate);
+        validateRentalPeriod(request.getStartDate(), request.getEndDate());
 
-        if (customerEmail == null || customerEmail.trim().isEmpty()) {
+        if (request.getCustomerEmail() == null || request.getCustomerEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("Customer email is required");
         }
 
-        Vehicle vehicle = findVehicleById(vehicleId);
+        Vehicle vehicle = findVehicleById(request.getVehicleId());
 
         if (vehicle == null) {
             throw new IllegalArgumentException("Vehicle not found");
         }
 
-        if (vehicle.getStatus() != VehicleStatus.AVAILABLE || rentalRepository.hasActiveRentalForVehicle(vehicleId)) {
+        if (vehicle.getStatus() != VehicleStatus.AVAILABLE || rentalRepository.hasActiveRentalForVehicle(request.getVehicleId())) {
             throw new IllegalStateException("Vehicle is already rented");
         }
 
-        vehicle.validateRental(customerAge, hasSpecialLicense);
+        vehicle.validateRental(request.getCustomerAge(), request.isHasSpecialLicense());
 
-        Rental rental = new Rental(rentalId, vehicleId, customerName, customerEmail, startDate, endDate, true);
+        Rental rental = new Rental(
+                request.getRentalId(),
+                request.getVehicleId(),
+                request.getCustomerName(),
+                request.getCustomerEmail(),
+                request.getStartDate(),
+                request.getEndDate(),
+                true
+        );
         rentalRepository.save(rental);
 
         vehicle.setStatus(VehicleStatus.RENTED);
         vehicleRepository.save(vehicle);
 
         // تجهيز نص الإشعار
-        String message = "Hello " + customerName
+        String message = "Hello " + request.getCustomerName()
                 + ",\n\nYour rental has been successfully confirmed."
-                + "\nRental ID: " + rentalId
-                + "\nVehicle ID: " + vehicleId
+                + "\nRental ID: " + request.getRentalId()
+                + "\nVehicle ID: " + request.getVehicleId()
                 + "\nVehicle type: " + vehicle.getType()
-                + "\nStart date: " + startDate
-                + "\nEnd date: " + endDate
+                + "\nStart date: " + request.getStartDate()
+                + "\nEnd date: " + request.getEndDate()
                 + "\n\nThank you for using VRMS.";
 
         // إطلاق الحدث لجميع المستمعين (Notify Observers)
