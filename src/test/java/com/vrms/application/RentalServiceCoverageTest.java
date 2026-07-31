@@ -183,8 +183,11 @@ class RentalServiceCoverageTest {
 
         RentalService service = new RentalService(rentalRepository,vehicleRepository);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> service.rentVehicle("R001","V001","Ali","ali@gmail.com",LocalDate.of(2026,7,10),LocalDate.of(2026,7,15)));
+        LocalDate startDate = LocalDate.of(2026, 7, 10);
+        LocalDate endDate = LocalDate.of(2026, 7, 15);
 
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+            () -> service.rentVehicle("R001", "V001", "Ali", "ali@gmail.com", startDate, endDate));
         assertEquals("Vehicle not found",exception.getMessage());
     }
 
