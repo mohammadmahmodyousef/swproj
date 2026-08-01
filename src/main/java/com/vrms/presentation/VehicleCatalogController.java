@@ -35,4 +35,8 @@ public class VehicleCatalogController {
 
         return result.toString().trim();
     }
+
+    public Vehicle findVehicleById(String vehicleId) {
+        return vehicleService.findVehicleById(vehicleId);
+    }
 }

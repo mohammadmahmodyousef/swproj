@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import com.vrms.application.AuthService;
+import com.vrms.application.RentalAnalyticsService;
 import com.vrms.application.RentalExpiryReminderService;
 import com.vrms.application.RentalReturnService;
 import com.vrms.application.RentalService;
@@ -31,6 +32,7 @@ import com.vrms.persistence.FileVehicleRepository;
 import com.vrms.persistence.ManagerRepository;
 import com.vrms.persistence.RentalRepository;
 import com.vrms.persistence.VehicleRepository;
+import com.vrms.presentation.AnalyticsController;
 import com.vrms.presentation.ManagerLoginController;
 import com.vrms.presentation.ManagerLogoutController;
 import com.vrms.presentation.RentalController;
@@ -70,7 +72,12 @@ public class Main {
 
         RentalPricingStrategy pricingStrategy = new DailyRentalPricingStrategy(50);
         LateReturnPenaltyStrategy penaltyStrategy = new DailyLateReturnPenaltyStrategy(20);
-        RentalReturnService returnService = new RentalReturnService(rentalRepository,vehicleRepository,pricingStrategy,penaltyStrategy,notificationService);        ManagerLoginController loginController = new ManagerLoginController(authService);
+        RentalReturnService returnService = new RentalReturnService(rentalRepository,vehicleRepository,pricingStrategy,penaltyStrategy,notificationService);
+
+        RentalAnalyticsService analyticsService = new RentalAnalyticsService(rentalRepository, vehicleRepository);
+        AnalyticsController analyticsController = new AnalyticsController(analyticsService, authService);
+
+        ManagerLoginController loginController = new ManagerLoginController(authService);
         ManagerLogoutController logoutController = new ManagerLogoutController(authService);
         VehicleCatalogController catalogController = new VehicleCatalogController(vehicleService,authService);
         RentalController rentalController = new RentalController(rentalService,authService);
@@ -119,8 +126,9 @@ public class Main {
                 System.out.println("4. Extend rental period");
                 System.out.println("5. Return a vehicle");
                 System.out.println("6. Generate rental notifications");
-                System.out.println("7. Logout");
-                System.out.println("8. Exit");
+                System.out.println("7. View analytics & manager dashboard");
+                System.out.println("8. Logout");
+                System.out.println("9. Exit");
                 System.out.print("Enter choice: ");
 
                 String choice = input.nextLine();
@@ -128,71 +136,149 @@ public class Main {
                 if (choice.equals("1")) {
                     System.out.println(catalogController.viewAvailableVehicles());
                 } else if (choice.equals("2")) {
-                    System.out.print("Enter rental ID: ");
-                    String rentalId = input.nextLine();
+                    String rentalId;
+                    while (true) {
+                        System.out.print("Enter rental ID: ");
+                        rentalId = input.nextLine().trim();
+                        if (!rentalId.isEmpty()) {
+                            break;
+                        }
+                        System.out.println("Rental ID cannot be empty. Please try again.");
+                    }
 
-                    System.out.print("Enter vehicle ID: ");
-                    String vehicleId = input.nextLine();
+                    com.vrms.domain.Vehicle selectedVehicle = null;
+                    String vehicleId = "";
+                    while (true) {
+                        System.out.print("Enter vehicle ID: ");
+                        vehicleId = input.nextLine().trim();
+                        selectedVehicle = catalogController.findVehicleById(vehicleId);
+                        if (selectedVehicle == null) {
+                            System.out.println("Vehicle with ID '" + vehicleId + "' does not exist. Please try again.");
+                            continue;
+                        }
+                        if (!selectedVehicle.isAvailable()) {
+                            System.out.println("Vehicle '" + selectedVehicle.getName() + "' (ID: " + vehicleId + ") is not available for rent. Please try again.");
+                            continue;
+                        }
+                        break;
+                    }
 
-                    System.out.print("Enter customer name: ");
-                    String customerName = input.nextLine();
+                    String customerName;
+                    while (true) {
+                        System.out.print("Enter customer name: ");
+                        customerName = input.nextLine().trim();
+                        if (!customerName.isEmpty()) {
+                            break;
+                        }
+                        System.out.println("Customer name cannot be empty. Please try again.");
+                    }
 
-                    System.out.print("Enter customer email: ");
-                    String customerEmail = input.nextLine();
+                    String customerEmail;
+                    while (true) {
+                        System.out.print("Enter customer email: ");
+                        customerEmail = input.nextLine().trim();
+                        if (customerEmail.contains("@") && customerEmail.contains(".")) {
+                            break;
+                        }
+                        System.out.println("Invalid email format (e.g. name@example.com). Please try again.");
+                    }
+
+                    boolean hasSpecialLicense = false;
+                    if (selectedVehicle.getType().equalsIgnoreCase("Truck")) {
+                        System.out.print("Does the customer have a special truck license? (yes/no): ");
+                        hasSpecialLicense = input.nextLine().trim().equalsIgnoreCase("yes");
+                    }
 
                     int customerAge;
-
-                    try {
+                    while (true) {
                         System.out.print("Enter customer age: ");
-                        customerAge = Integer.parseInt(input.nextLine());
-                    } catch (NumberFormatException e) {
-                        System.out.println("Invalid customer age");
-                        continue;
+                        try {
+                            customerAge = Integer.parseInt(input.nextLine().trim());
+                            if (customerAge < 18) {
+                                System.out.println("Customer must be at least 18 years old to rent a vehicle. Please re-enter age.");
+                                continue;
+                            }
+
+                            selectedVehicle.validateRental(customerAge, hasSpecialLicense);
+                            break;
+                        } catch (NumberFormatException e) {
+                            System.out.println("Invalid age format. Please enter a valid number.");
+                        } catch (IllegalArgumentException e) {
+                            System.out.println(e.getMessage() + ". Please re-enter age.");
+                        }
                     }
 
-                    System.out.print("Does the customer have a special truck license? (yes/no): ");
-                    boolean hasSpecialLicense = input.nextLine().trim().equalsIgnoreCase("yes");
-
-                    try {
+                    LocalDate startDate;
+                    while (true) {
                         System.out.print("Enter start date (yyyy-MM-dd): ");
-                        LocalDate startDate = LocalDate.parse(input.nextLine());
-
-                        System.out.print("Enter end date (yyyy-MM-dd): ");
-                        LocalDate endDate = LocalDate.parse(input.nextLine());
-
-                        String result = rentalController.rentVehicle(rentalId,vehicleId,customerName,customerEmail,startDate,endDate,customerAge,hasSpecialLicense);
-                        System.out.println(result);
-                    } catch (DateTimeParseException e) {
-                        System.out.println("Invalid date format");
+                        try {
+                            startDate = LocalDate.parse(input.nextLine().trim());
+                            break;
+                        } catch (DateTimeParseException e) {
+                            System.out.println("Invalid date format (must be yyyy-MM-dd, e.g. 2026-08-01). Please try again.");
+                        }
                     }
+
+                    LocalDate endDate;
+                    while (true) {
+                        System.out.print("Enter end date (yyyy-MM-dd): ");
+                        try {
+                            endDate = LocalDate.parse(input.nextLine().trim());
+                            if (endDate.isBefore(startDate)) {
+                                System.out.println("End date (" + endDate + ") cannot be before start date (" + startDate + "). Please re-enter end date.");
+                                continue;
+                            }
+
+                            long days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+                            if (days > 30) {
+                                System.out.println("Rental duration cannot exceed 30 days. Please re-enter end date.");
+                                continue;
+                            }
+
+                            break;
+                        } catch (DateTimeParseException e) {
+                            System.out.println("Invalid date format (must be yyyy-MM-dd, e.g. 2026-08-05). Please try again.");
+                        }
+                    }
+
+                    String result = rentalController.rentVehicle(rentalId,vehicleId,customerName,customerEmail,startDate,endDate,customerAge,hasSpecialLicense);
+                    System.out.println(result);
                 } else if (choice.equals("3")) {
                     System.out.println(rentalController.viewActiveRentals());
                 } else if (choice.equals("4")) {
                     System.out.print("Enter rental ID: ");
-                    String rentalId = input.nextLine();
+                    String rentalId = input.nextLine().trim();
 
-                    try {
+                    LocalDate newEndDate;
+                    while (true) {
                         System.out.print("Enter new end date (yyyy-MM-dd): ");
-                        LocalDate newEndDate = LocalDate.parse(input.nextLine());
-
-                        String result = rentalController.extendRental(rentalId,newEndDate);
-                        System.out.println(result);
-                    } catch (DateTimeParseException e) {
-                        System.out.println("Invalid date format");
+                        try {
+                            newEndDate = LocalDate.parse(input.nextLine().trim());
+                            break;
+                        } catch (DateTimeParseException e) {
+                            System.out.println("Invalid date format (must be yyyy-MM-dd, e.g. 2026-08-10). Please try again.");
+                        }
                     }
+
+                    String result = rentalController.extendRental(rentalId,newEndDate);
+                    System.out.println(result);
                 } else if (choice.equals("5")) {
                     System.out.print("Enter rental ID: ");
-                    String rentalId = input.nextLine();
+                    String rentalId = input.nextLine().trim();
 
-                    try {
+                    LocalDate returnDate;
+                    while (true) {
                         System.out.print("Enter return date (yyyy-MM-dd): ");
-                        LocalDate returnDate = LocalDate.parse(input.nextLine());
-
-                        String result = returnController.returnVehicle(rentalId,returnDate);
-                        System.out.println(result);
-                    } catch (DateTimeParseException e) {
-                        System.out.println("Invalid date format");
+                        try {
+                            returnDate = LocalDate.parse(input.nextLine().trim());
+                            break;
+                        } catch (DateTimeParseException e) {
+                            System.out.println("Invalid date format (must be yyyy-MM-dd, e.g. 2026-08-10). Please try again.");
+                        }
                     }
+
+                    String result = returnController.returnVehicle(rentalId,returnDate);
+                    System.out.println(result);
                 } else if (choice.equals("6")) {
                     List<String> reminders = reminderService.generateExpiryReminders(LocalDate.now());
                     List<String> expirationNotifications = reminderService.generateExpirationNotifications(LocalDate.now());
@@ -204,8 +290,10 @@ public class Main {
                         System.out.println(expirationNotifications.size() + " expiration notification(s) generated");
                     }
                 } else if (choice.equals("7")) {
-                    System.out.println(logoutController.logout());
+                    System.out.println(analyticsController.viewAnalyticsReport());
                 } else if (choice.equals("8")) {
+                    System.out.println(logoutController.logout());
+                } else if (choice.equals("9")) {
                     running = false;
                 } else {
                     System.out.println("Invalid choice");
