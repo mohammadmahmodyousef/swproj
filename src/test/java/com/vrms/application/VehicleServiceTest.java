@@ -61,4 +61,14 @@ class VehicleServiceTest {
         assertFalse(vehicles.stream().anyMatch(vehicle -> vehicle.getId().equals("V002")));
     }
 
+    @Test
+    void findVehicleByIdShouldFindVehicleOrReturnNull() {
+        Vehicle vehicle = vehicleService.findVehicleById("V001");
+        assertNotNull(vehicle);
+        assertEquals("Toyota Corolla", vehicle.getName());
+
+        assertNull(vehicleService.findVehicleById("INVALID"));
+        assertNull(vehicleService.findVehicleById(null));
+        assertNull(vehicleService.findVehicleById("   "));
+    }
 }

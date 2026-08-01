@@ -91,4 +91,10 @@ class VehicleCatalogControllerTest {
 
         assertEquals("Manager must login first", result);
     }
+
+    @Test
+    void findVehicleByIdShouldReturnVehicleOrNull() {
+        assertNotNull(controller.findVehicleById("V001"));
+        assertNull(controller.findVehicleById("V999"));
+    }
 }

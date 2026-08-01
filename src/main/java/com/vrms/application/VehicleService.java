@@ -26,4 +26,18 @@ public class VehicleService {
 
         return availableVehicles;
     }
+
+    public Vehicle findVehicleById(String id) {
+        if (id == null || id.trim().isEmpty()) {
+            return null;
+        }
+
+        for (Vehicle vehicle : vehicleRepository.findAll()) {
+            if (vehicle.getId().equalsIgnoreCase(id.trim())) {
+                return vehicle;
+            }
+        }
+
+        return null;
+    }
 }
